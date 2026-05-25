@@ -33,34 +33,82 @@
   /* LOADER */
   #loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
   .loader-logo{font-family:var(--font-serif);font-size:36px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-  .loader-logo span{color:var(--text);}
   .loader-spinner{width:32px;height:32px;border:3px solid var(--bg3);border-top-color:var(--teal);border-radius:50%;animation:spin 0.8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loader-msg{font-size:13px;color:var(--text3);}
 
   /* AUTH */
-  #auth-screen{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 24px;text-align:center;}
+  #auth-screen{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 24px;text-align:center;overflow-y:auto;}
+  #auth-screen::-webkit-scrollbar{display:none;}
   .auth-logo{font-family:var(--font-serif);font-size:48px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
-  
-  .auth-tagline{font-size:14px;color:var(--text3);margin-bottom:48px;line-height:1.6;}
-  .auth-btn{width:100%;padding:16px;border-radius:14px;border:none;font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;transition:transform 0.15s;}
-  .auth-btn:active{transform:scale(0.98);}
-  .btn-google{background:#fff;color:#1a1a1a;}
-  .btn-email{background:var(--grad2);color:#fff;}
-  .auth-divider{font-size:12px;color:var(--text3);margin:8px 0 20px;}
+  .auth-tagline{font-size:14px;color:var(--text3);margin-bottom:32px;line-height:1.6;}
+
+  /* Google button — solo círculo con logo */
+  .auth-google-circle{
+    width:52px;height:52px;border-radius:50%;
+    background:white;border:none;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;margin:0 auto 20px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.3);
+    transition:transform 0.15s;flex-shrink:0;
+  }
+  .auth-google-circle:active{transform:scale(0.95);}
+
+  .auth-divider{font-size:12px;color:var(--text3);margin-bottom:20px;}
   .auth-form{width:100%;text-align:left;}
-  .auth-switch{font-size:13px;color:var(--text3);margin-top:16px;text-align:center;}
-  .auth-switch a{color:var(--accent);cursor:pointer;text-decoration:none;}
+  .auth-switch-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;}
+  .auth-tab-btn{
+    padding:11px;border-radius:var(--radius-sm);
+    font-family:var(--font);font-size:14px;font-weight:500;
+    cursor:pointer;border:1px solid var(--border2);
+    transition:all 0.2s;text-align:center;
+  }
+  .auth-tab-btn.active-login{background:var(--grad2);color:#fff;border-color:transparent;}
+  .auth-tab-btn.inactive{background:transparent;color:var(--text3);}
+  .auth-tab-btn.active-register{background:var(--grad2);color:#fff;border-color:transparent;}
+
+  .form-group{margin-bottom:14px;}
+  .form-label{font-size:12px;color:var(--text3);letter-spacing:0.5px;margin-bottom:6px;display:block;}
+  .form-input{
+    width:100%;background:var(--bg3);border:1px solid var(--border2);
+    border-radius:var(--radius-sm);padding:12px 14px;
+    font-size:16px;font-family:var(--font);color:var(--text);outline:none;transition:border-color 0.2s;
+  }
+  .form-input:focus{border-color:var(--teal);}
+  .form-input::placeholder{color:var(--text3);}
+  .pass-hint{font-size:11px;color:var(--text3);margin-top:4px;}
+
+  .btn-primary{width:100%;background:var(--grad2);color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:4px;transition:opacity 0.2s;}
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-secondary{width:100%;background:transparent;color:var(--text3);border:1px solid var(--border2);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:6px;}
+  .btn-danger{width:100%;background:transparent;color:var(--red);border:1px solid rgba(224,133,133,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
+
+  .auth-reset-link{font-size:13px;color:var(--text3);margin-top:12px;text-align:center;}
+  .auth-reset-link a{color:var(--teal);cursor:pointer;}
+
+  /* VERIFY BANNER */
+  .verify-banner{
+    background:rgba(232,201,122,0.1);border:1px solid rgba(232,201,122,0.3);
+    border-radius:var(--radius-sm);padding:14px;margin-top:16px;
+    font-size:13px;color:var(--amber);line-height:1.6;text-align:center;
+  }
 
   /* HEADER */
   .header{padding:52px 20px 14px;background:var(--bg);flex-shrink:0;}
   .header-top{display:flex;justify-content:space-between;align-items:flex-start;}
-  .header-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+  .header-greeting{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
   .header-logo{font-family:var(--font-serif);font-size:26px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-  
   .header-right{display:flex;gap:8px;align-items:center;}
   .quincena-badge{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;}
-  .logout-btn{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 10px;font-size:12px;color:var(--text3);cursor:pointer;}
+
+  /* AVATAR BUTTON */
+  .avatar-btn{
+    width:36px;height:36px;border-radius:50%;
+    background:var(--grad2);border:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:600;color:white;
+    cursor:pointer;flex-shrink:0;font-family:var(--font);
+  }
 
   /* BALANCE */
   .balance-section{padding:0 20px 8px;flex-shrink:0;}
@@ -101,9 +149,6 @@
   .gasto-cat{font-size:11px;color:var(--text3);margin-top:2px;}
   .gasto-amount{font-size:15px;font-weight:600;color:var(--red);white-space:nowrap;}
   .gasto-amount.ingreso{color:var(--green);}
-  .sync-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle;}
-  .sync-ok{background:rgba(61,122,90,0.2);color:var(--green);}
-  .sync-pending{background:rgba(232,201,122,0.2);color:var(--amber);}
 
   /* EMPTY */
   .empty-state{text-align:center;padding:40px 20px;color:var(--text3);}
@@ -111,7 +156,7 @@
   .empty-state p{font-size:14px;line-height:1.6;}
 
   /* FAB */
-  .fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:390px;background:var(--grad2);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 32px rgba(63,232,216,0.2);transition:transform 0.15s,box-shadow 0.15s;z-index:10;}
+  .fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:390px;background:var(--grad2);color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 32px rgba(63,232,216,0.2);transition:transform 0.15s;z-index:10;}
   .fab:active{transform:translateX(-50%) scale(0.98);}
 
   /* MODAL */
@@ -123,24 +168,15 @@
   .modal-handle{width:40px;height:4px;background:var(--bg4);border-radius:2px;margin:0 auto 20px;}
   .modal-title{font-family:var(--font-serif);font-size:22px;color:var(--text);margin-bottom:20px;}
 
-  /* FORM */
-  .form-group{margin-bottom:14px;}
-  .form-label{font-size:12px;color:var(--text3);letter-spacing:0.5px;margin-bottom:6px;display:block;}
-  .form-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;font-size:16px;font-family:var(--font);color:var(--text);outline:none;transition:border-color 0.2s;}
-  .form-input:focus{border-color:var(--teal);}
-  .form-input::placeholder{color:var(--text3);}
-  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-  .cat-btn{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 4px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:11px;color:var(--text3);}
-  .cat-btn .cat-emoji{font-size:20px;display:block;margin-bottom:3px;}
-  .cat-btn.selected{border-color:var(--teal);background:rgba(63,232,216,0.1);color:var(--teal);}
   .type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
   .type-btn{padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-family:var(--font);font-size:14px;cursor:pointer;transition:all 0.15s;text-align:center;}
   .type-btn.active-gasto{border-color:var(--pink2);background:rgba(158,80,112,0.15);color:var(--pink);}
   .type-btn.active-ingreso{border-color:var(--green2);background:rgba(61,122,90,0.15);color:var(--green);}
-  .btn-primary{width:100%;background:var(--grad2);color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;}
-  .btn-secondary{width:100%;background:var(--bg4);color:var(--text2);border:none;border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:6px;}
-  .btn-danger{width:100%;background:transparent;color:var(--red);border:1px solid rgba(224,133,133,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
+
+  .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .cat-btn{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 4px;text-align:center;cursor:pointer;transition:all 0.15s;font-size:11px;color:var(--text3);}
+  .cat-btn .cat-emoji{font-size:20px;display:block;margin-bottom:3px;}
+  .cat-btn.selected{border-color:var(--teal);background:rgba(63,232,216,0.1);color:var(--teal);}
 
   /* QUINCENA LIST */
   .quincena-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:border-color 0.2s;}
@@ -157,16 +193,33 @@
   .cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
   /* AHORRO */
-  .ahorro-ring{width:140px;height:140px;border-radius:50%;border:3px solid var(--bg3);display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 20px;position:relative;}
-  .ahorro-ring svg{position:absolute;top:-3px;left:-3px;}
-  .ahorro-ring-inner{position:relative;text-align:center;}
-  .ahorro-ring-pct{font-size:28px;font-weight:600;color:var(--teal);}
-  .ahorro-ring-label{font-size:11px;color:var(--text3);}
-  .ahorro-tip{background:var(--bg2);border:1px solid rgba(133,201,160,0.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;font-size:13px;color:var(--text2);line-height:1.5;}
+  .ahorro-tip{background:var(--bg2);border:1px solid rgba(63,232,216,0.15);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;font-size:13px;color:var(--text2);line-height:1.5;}
   .ahorro-tip strong{color:var(--teal);}
   input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--bg4);outline:none;margin-bottom:12px;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--teal);cursor:pointer;border:2px solid var(--bg);}
   .section-title{font-size:13px;color:var(--text3);letter-spacing:0.5px;margin:16px 0 10px;}
+
+  /* PERFIL */
+  .profile-header{text-align:center;padding:20px 0 24px;}
+  .profile-avatar{
+    width:80px;height:80px;border-radius:50%;
+    background:var(--grad2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px;font-weight:700;color:white;
+    margin:0 auto 12px;font-family:var(--font);
+    border:3px solid var(--bg3);
+  }
+  .profile-name{font-family:var(--font-serif);font-size:22px;color:var(--text);margin-bottom:4px;}
+  .profile-email{font-size:13px;color:var(--text3);}
+  .profile-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+  .profile-card-title{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:14px;text-transform:uppercase;}
+  .profile-field{margin-bottom:14px;}
+  .profile-field:last-child{margin-bottom:0;}
+  .profile-field label{font-size:12px;color:var(--text3);letter-spacing:0.5px;margin-bottom:6px;display:block;}
+  .profile-field input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;font-size:15px;font-family:var(--font);color:var(--text);outline:none;transition:border-color 0.2s;}
+  .profile-field input:focus{border-color:var(--teal);}
+  .profile-field input:disabled{opacity:0.5;cursor:not-allowed;}
+  .save-indicator{font-size:12px;color:var(--teal);margin-top:8px;text-align:center;height:18px;transition:opacity 0.3s;}
 
   /* TOAST */
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
@@ -174,6 +227,7 @@
 </style>
 </head>
 <body>
+
 <div id="loader">
   <img src="icon-192.png" style="width:80px;height:80px;border-radius:20px;margin-bottom:4px" onerror="this.style.display='none'">
   <div class="loader-logo">MoniFy</div>
@@ -181,40 +235,79 @@
   <div class="loader-msg">Conectando...</div>
 </div>
 
+<!-- AUTH -->
 <div id="auth-screen">
   <img src="icon-192.png" style="width:72px;height:72px;border-radius:18px;margin-bottom:12px" onerror="this.style.display='none'">
   <div class="auth-logo">MoniFy</div>
   <div class="auth-tagline">Tu control de quincena,<br>siempre contigo 💜</div>
-  <button class="auth-btn btn-google" onclick="loginGoogle()">
-    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-    Continuar con Google
+
+  <button class="auth-google-circle" onclick="loginGoogle()" title="Continuar con Google">
+    <svg width="22" height="22" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
   </button>
+
   <div class="auth-divider">— o con correo —</div>
-  <div class="auth-form" id="email-form">
-    <div class="form-group">
-      <label class="form-label">CORREO</label>
-      <input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com">
+
+  <div class="auth-form" id="auth-form-wrap">
+    <div class="auth-switch-btns">
+      <button class="auth-tab-btn active-login" id="tab-login" onclick="switchAuthMode('login')">Entrar</button>
+      <button class="auth-tab-btn inactive" id="tab-register" onclick="switchAuthMode('register')">Crear cuenta</button>
     </div>
-    <div class="form-group">
-      <label class="form-label">CONTRASEÑA</label>
-      <input class="form-input" type="password" id="auth-pass" placeholder="••••••••">
+
+    <!-- LOGIN FIELDS -->
+    <div id="login-fields">
+      <div class="form-group">
+        <label class="form-label">CORREO</label>
+        <input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CONTRASEÑA</label>
+        <input class="form-input" type="password" id="auth-pass" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="loginEmail()">Entrar</button>
+      <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
     </div>
-    <button class="auth-btn btn-email" onclick="loginEmail()">Entrar</button>
-    <button class="btn-secondary" onclick="registerEmail()" style="margin-top:8px">Crear cuenta nueva</button>
-    <div class="auth-switch">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
+
+    <!-- REGISTER FIELDS -->
+    <div id="register-fields" style="display:none">
+      <div class="form-group">
+        <label class="form-label">USUARIO</label>
+        <input class="form-input" type="text" id="reg-username" placeholder="¿Cómo te llamas?">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CORREO</label>
+        <input class="form-input" type="email" id="reg-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CONTRASEÑA</label>
+        <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20">
+        <div class="pass-hint" id="pass-hint"></div>
+      </div>
+      <button class="btn-primary" onclick="registerEmail()">Crear cuenta</button>
+    </div>
+
+    <!-- VERIFY BANNER -->
+    <div class="verify-banner" id="verify-banner" style="display:none">
+      📧 Te enviamos un correo de verificación. Confírmalo y luego inicia sesión.
+    </div>
   </div>
 </div>
 
+<!-- MAIN APP -->
 <div id="app" style="display:none">
   <div class="header">
     <div class="header-top">
       <div>
-        <div class="header-label">Hola, <span id="user-name-label">--</span> 👋</div>
+        <div class="header-greeting">Hola, <span id="user-name-label">--</span> 👋</div>
         <div class="header-logo">MoniFy</div>
       </div>
       <div class="header-right">
         <div class="quincena-badge" id="quincena-badge-btn">📅 <span id="current-quincena-label">--</span></div>
-        <div class="logout-btn" onclick="doLogout()">↩</div>
+        <button class="avatar-btn" id="avatar-btn" onclick="openModal('modal-perfil')">?</button>
       </div>
     </div>
   </div>
@@ -258,7 +351,6 @@
   </div>
 
   <div class="content" id="main-content"></div>
-
   <button class="fab" id="fab-btn">＋ Agregar movimiento</button>
 </div>
 
@@ -312,7 +404,7 @@
     <div class="modal-title">Mis Quincenas</div>
     <div id="quincena-list"></div>
     <div class="section-title">NUEVA QUINCENA</div>
-    <div class="form-row">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-group">
         <label class="form-label">INICIO</label>
         <input class="form-input" type="date" id="q-inicio">
@@ -331,11 +423,37 @@
   </div>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- MODAL PERFIL -->
+<div class="modal-overlay" id="modal-perfil">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="profile-header">
+      <div class="profile-avatar" id="perfil-avatar">?</div>
+      <div class="profile-name" id="perfil-name">--</div>
+      <div class="profile-email" id="perfil-email">--</div>
+    </div>
+    <div class="profile-card">
+      <div class="profile-card-title">Editar perfil</div>
+      <div class="profile-field">
+        <label>USUARIO</label>
+        <input type="text" id="perfil-username-input" placeholder="Tu nombre">
+      </div>
+      <div class="profile-field">
+        <label>CORREO</label>
+        <input type="email" id="perfil-email-input" placeholder="tu@correo.com" disabled>
+      </div>
+      <button class="btn-primary" onclick="saveProfile()" style="margin-top:12px">Guardar cambios</button>
+      <div class="save-indicator" id="save-indicator"></div>
+    </div>
+    <button class="btn-danger" onclick="doLogout()">Cerrar sesión</button>
+    <button class="btn-secondary" onclick="closeModal('modal-perfil')">Cancelar</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, getDocs, deleteDoc, query, where, orderBy, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, deleteDoc, query, where, orderBy, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1LtTOBsbEoeg6OJzb9hCN2HfsxOGTV4I",
@@ -343,15 +461,14 @@ const firebaseConfig = {
   projectId: "monify-3c055",
   storageBucket: "monify-3c055.firebasestorage.app",
   messagingSenderId: "295735096915",
-  appId: "1:295735096915:web:2f9cbdd92fd561afa8f8a6",
-  measurementId: "G-VKPFS3L6QY"
+  appId: "1:295735096915:web:2f9cbdd92fd561afa8f8a6"
 };
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
-// ── GLOBALS ──────────────────────────────────────────
+// ── CATS ──────────────────────────────────────────────
 const CATS = [
   {id:'comida',label:'Comida',emoji:'🍔'},
   {id:'transporte',label:'Transporte',emoji:'🚌'},
@@ -364,6 +481,7 @@ const CATS = [
 ];
 const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',servicios:'#e8c97a',salud:'#85c9a0',ropa:'#b5a8e0',entretenim:'#e08585',hogar:'#a8c0e0',otro:'#a09dba'};
 
+// ── STATE ─────────────────────────────────────────────
 let currentUser = null;
 let quincenas = [];
 let movimientos = [];
@@ -373,51 +491,107 @@ let selectedCat = 'otro';
 let currentTab = 'movimientos';
 let unsubMovs = null;
 let unsubQs = null;
+let authMode = 'login';
 
 // ── UTILS ─────────────────────────────────────────────
 const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = s => { const [y,mo,d]=s.split('-'); const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return `${parseInt(d)} ${ms[parseInt(mo)-1]}`; };
 const today = () => new Date().toISOString().split('T')[0];
 const quincenaLabel = q => q ? `${fmtDate(q.inicio)} – ${fmtDate(q.fin)}` : '--';
+const getInitials = name => name ? name.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
 
-function showToast(msg, dur=2500) {
+function showToast(msg, dur=2800) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), dur);
 }
-
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.openModal = openModal;
+window.closeModal = closeModal;
+
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
 
-// ── AUTH ──────────────────────────────────────────────
+// ── AUTH MODE SWITCH ──────────────────────────────────
+window.switchAuthMode = mode => {
+  authMode = mode;
+  document.getElementById('login-fields').style.display = mode==='login' ? 'block' : 'none';
+  document.getElementById('register-fields').style.display = mode==='register' ? 'block' : 'none';
+  document.getElementById('verify-banner').style.display = 'none';
+  document.getElementById('tab-login').className = 'auth-tab-btn ' + (mode==='login' ? 'active-login' : 'inactive');
+  document.getElementById('tab-register').className = 'auth-tab-btn ' + (mode==='register' ? 'active-register' : 'inactive');
+};
+
+// ── PASS VALIDATION ───────────────────────────────────
+document.getElementById('reg-pass').addEventListener('input', function() {
+  const val = this.value;
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val);
+  const hasMin = val.length >= 6;
+  const hint = document.getElementById('pass-hint');
+  if (!val) { hint.textContent = ''; return; }
+  if (!hasMin) { hint.style.color = '#e08585'; hint.textContent = '✗ Mínimo 6 caracteres'; }
+  else if (!hasSpecial) { hint.style.color = '#e8c97a'; hint.textContent = '⚠ Agrega al menos 1 carácter especial (!@#$...)'; }
+  else { hint.style.color = '#5df5a0'; hint.textContent = '✓ Contraseña válida'; }
+});
+
+// ── GOOGLE LOGIN ──────────────────────────────────────
 window.loginGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-  } catch(e) { showToast('Error al iniciar con Google'); }
+  } catch(e) { showToast('Error al iniciar con Google 😕'); }
 };
 
+// ── EMAIL LOGIN ───────────────────────────────────────
 window.loginEmail = async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass = document.getElementById('auth-pass').value;
   if (!email||!pass) { showToast('Completa correo y contraseña'); return; }
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) { showToast('Correo o contraseña incorrectos'); }
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    if (!cred.user.emailVerified) {
+      await signOut(auth);
+      document.getElementById('verify-banner').style.display = 'block';
+      document.getElementById('verify-banner').textContent = '📧 Aún no has verificado tu correo. Revisa tu bandeja de entrada.';
+      return;
+    }
+  } catch(e) {
+    const msg = e.code === 'auth/invalid-credential' ? 'Correo o contraseña incorrectos' : 'Error al iniciar sesión';
+    showToast(msg);
+  }
 };
 
+// ── REGISTER ─────────────────────────────────────────
 window.registerEmail = async () => {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass = document.getElementById('auth-pass').value;
-  if (!email||!pass) { showToast('Completa correo y contraseña'); return; }
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  if (!username) { showToast('Ingresa un nombre de usuario'); return; }
+  if (!email) { showToast('Ingresa tu correo'); return; }
   if (pass.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres'); return; }
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pass);
+  if (!hasSpecial) { showToast('La contraseña necesita al menos 1 carácter especial'); return; }
   try {
-    await createUserWithEmailAndPassword(auth, email, pass);
-    showToast('¡Cuenta creada! Bienvenid@ 🎉');
-  } catch(e) { showToast('Error al crear cuenta: ' + e.message); }
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: username });
+    await setDoc(doc(db, 'users', cred.user.uid), { username, email, createdAt: Date.now() });
+    await sendEmailVerification(cred.user);
+    await signOut(auth);
+    // Clear form and switch to login
+    document.getElementById('reg-username').value = '';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-pass').value = '';
+    document.getElementById('pass-hint').textContent = '';
+    switchAuthMode('login');
+    document.getElementById('verify-banner').style.display = 'block';
+    document.getElementById('verify-banner').textContent = '✅ ¡Cuenta creada! Te enviamos un correo de verificación. Confírmalo para poder entrar.';
+  } catch(e) {
+    const msg = e.code === 'auth/email-already-in-use' ? 'Ya existe una cuenta con ese correo' : 'Error al crear cuenta: ' + e.message;
+    showToast(msg);
+  }
 };
 
+// ── RESET PASS ────────────────────────────────────────
 window.resetPass = async () => {
   const email = document.getElementById('auth-email').value.trim();
   if (!email) { showToast('Escribe tu correo primero'); return; }
@@ -427,22 +601,38 @@ window.resetPass = async () => {
   } catch(e) { showToast('Error al enviar correo'); }
 };
 
+// ── LOGOUT ────────────────────────────────────────────
 window.doLogout = async () => {
   if (unsubMovs) unsubMovs();
   if (unsubQs) unsubQs();
+  closeModal('modal-perfil');
   await signOut(auth);
 };
 
-// ── AUTH STATE ─────────────────────────────────────────
-onAuthStateChanged(auth, user => {
+// ── AUTH STATE ────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display = 'none';
-  if (user) {
+  if (user && user.emailVerified) {
     currentUser = user;
-    const name = user.displayName ? user.displayName.split(' ')[0] : user.email.split('@')[0];
-    document.getElementById('user-name-label').textContent = name;
+    // Load username from Firestore
+    const snap = await getDoc(doc(db,'users',user.uid));
+    const username = snap.exists() ? snap.data().username : (user.displayName || user.email.split('@')[0]);
+    document.getElementById('user-name-label').textContent = username;
+    // Avatar
+    const initials = getInitials(username);
+    document.getElementById('avatar-btn').textContent = initials;
+    document.getElementById('perfil-avatar').textContent = initials;
+    document.getElementById('perfil-name').textContent = username;
+    document.getElementById('perfil-email').textContent = user.email;
+    document.getElementById('perfil-username-input').value = username;
+    document.getElementById('perfil-email-input').value = user.email;
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     startListeners();
+  } else if (user && !user.emailVerified) {
+    await signOut(auth);
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
   } else {
     currentUser = null;
     quincenas = []; movimientos = []; currentQuincenaId = null;
@@ -451,15 +641,33 @@ onAuthStateChanged(auth, user => {
   }
 });
 
+// ── PROFILE ───────────────────────────────────────────
+window.saveProfile = async () => {
+  const newName = document.getElementById('perfil-username-input').value.trim();
+  if (!newName) { showToast('El nombre no puede estar vacío'); return; }
+  try {
+    await updateProfile(currentUser, { displayName: newName });
+    await updateDoc(doc(db,'users',currentUser.uid), { username: newName });
+    const initials = getInitials(newName);
+    document.getElementById('user-name-label').textContent = newName;
+    document.getElementById('avatar-btn').textContent = initials;
+    document.getElementById('perfil-avatar').textContent = initials;
+    document.getElementById('perfil-name').textContent = newName;
+    const ind = document.getElementById('save-indicator');
+    ind.textContent = '✓ Guardado';
+    ind.style.opacity = '1';
+    setTimeout(() => { ind.style.opacity = '0'; }, 2500);
+    showToast('Perfil actualizado ✅');
+  } catch(e) { showToast('Error al guardar perfil'); }
+};
+
 // ── FIRESTORE LISTENERS ────────────────────────────────
 function startListeners() {
   if (unsubQs) unsubQs();
   if (unsubMovs) unsubMovs();
-
   const uid = currentUser.uid;
-
   unsubQs = onSnapshot(
-    query(collection(db, 'quincenas'), where('uid','==',uid), orderBy('inicio','desc')),
+    query(collection(db,'quincenas'), where('uid','==',uid), orderBy('inicio','desc')),
     snap => {
       quincenas = snap.docs.map(d => ({id:d.id,...d.data()}));
       if (!currentQuincenaId && quincenas.length > 0) currentQuincenaId = quincenas[0].id;
@@ -474,7 +682,7 @@ function startMovsListener() {
   if (!currentQuincenaId) { movimientos = []; render(); return; }
   const uid = currentUser.uid;
   unsubMovs = onSnapshot(
-    query(collection(db, 'movimientos'), where('uid','==',uid), where('quincenaId','==',currentQuincenaId), orderBy('fecha','desc')),
+    query(collection(db,'movimientos'), where('uid','==',uid), where('quincenaId','==',currentQuincenaId), orderBy('fecha','desc')),
     snap => { movimientos = snap.docs.map(d => ({id:d.id,...d.data()})); render(); }
   );
 }
@@ -485,9 +693,8 @@ window.createQuincena = async () => {
   const fin = document.getElementById('q-fin').value;
   const saldo = parseFloat(document.getElementById('q-saldo').value);
   if (!inicio||!fin||isNaN(saldo)||saldo<0) { showToast('Completa todos los campos'); return; }
-  const uid = currentUser.uid;
   try {
-    const ref = await addDoc(collection(db,'quincenas'), {uid,inicio,fin,saldo,createdAt:Date.now()});
+    const ref = await addDoc(collection(db,'quincenas'), {uid:currentUser.uid,inicio,fin,saldo,createdAt:Date.now()});
     currentQuincenaId = ref.id;
     closeModal('modal-quincena');
     showToast('Quincena creada ✅');
@@ -505,7 +712,7 @@ function renderQuincenaList() {
   const el = document.getElementById('quincena-list');
   if (quincenas.length===0) { el.innerHTML='<div style="color:var(--text3);font-size:13px;margin-bottom:16px">Sin quincenas aún.</div>'; return; }
   el.innerHTML = quincenas.map(q => {
-    const movs = movimientos.filter(m => m.quincenaId===q.id);
+    const movs = movimientos.filter(m=>m.quincenaId===q.id);
     const gastos = movs.filter(m=>m.type==='gasto').reduce((a,m)=>a+m.monto,0);
     const isActive = q.id===currentQuincenaId;
     return `<div class="quincena-item ${isActive?'active':''}" onclick="selectQuincena('${q.id}')">
@@ -513,7 +720,7 @@ function renderQuincenaList() {
         <div class="quincena-item-title">${quincenaLabel(q)}</div>
         <div class="quincena-item-sub">Inicio: ${fmt(q.saldo)} · Gastado: ${fmt(gastos)}</div>
       </div>
-      ${isActive?'<div style="color:var(--accent);font-size:18px">✓</div>':''}
+      ${isActive?'<div style="color:var(--teal);font-size:18px">✓</div>':''}
     </div>`;
   }).join('');
 }
@@ -524,11 +731,10 @@ window.saveMovimiento = async () => {
   if (isNaN(monto)||monto<=0) { showToast('Ingresa un monto válido'); return; }
   const desc = document.getElementById('input-desc').value.trim();
   const fecha = document.getElementById('input-fecha').value || today();
-  const uid = currentUser.uid;
   try {
-    await addDoc(collection(db,'movimientos'), {uid,quincenaId:currentQuincenaId,monto,desc,fecha,cat:selectedCat,type:currentType,createdAt:Date.now()});
+    await addDoc(collection(db,'movimientos'), {uid:currentUser.uid,quincenaId:currentQuincenaId,monto,desc,fecha,cat:selectedCat,type:currentType,createdAt:Date.now()});
     closeModal('modal-add');
-    showToast('Guardado en la nube ☁️');
+    showToast('Guardado ☁️');
   } catch(e) { showToast('Error al guardar'); }
 };
 
@@ -573,9 +779,8 @@ function updateHeader() {
   const fill = document.getElementById('progress-fill');
   fill.style.width = pct+'%';
   fill.className = 'progress-bar-fill'+(pct>75?' danger':'');
-  const suggested = fmt(inicial*0.2);
   document.getElementById('savings-text').innerHTML = inicial>0
-    ? `💡 Si apartas <strong>${suggested}</strong> (20%) desde el inicio, ahorras sin sentirlo.`
+    ? `💡 Si apartas <strong>${fmt(inicial*0.2)}</strong> (20%) desde el inicio, ahorras sin sentirlo.`
     : 'Crea una quincena para ver tu sugerencia de ahorro.';
 }
 
@@ -583,13 +788,12 @@ function renderMovimientos() {
   const content = document.getElementById('main-content');
   const q = getCurrentQ();
   if (!q) { content.innerHTML='<div class="empty-state"><div class="empty-state-icon">📅</div><p>No tienes ninguna quincena.<br>Toca el botón de fecha arriba.</p></div>'; return; }
-  if (movimientos.length===0) { content.innerHTML='<div class="empty-state"><div class="empty-state-icon">💸</div><p>Sin movimientos aún.<br>Toca el botón de abajo para agregar uno.</p></div>'; return; }
+  if (movimientos.length===0) { content.innerHTML='<div class="empty-state"><div class="empty-state-icon">💸</div><p>Sin movimientos aún.<br>Toca el botón de abajo.</p></div>'; return; }
   const byDay = {};
   movimientos.forEach(m => { if(!byDay[m.fecha]) byDay[m.fecha]=[]; byDay[m.fecha].push(m); });
   let html='';
   Object.keys(byDay).sort((a,b)=>b.localeCompare(a)).forEach(fecha => {
-    const isToday = fecha===today();
-    html+=`<div class="day-group"><div class="day-label">${isToday?'🟢 Hoy · ':''}${fmtDate(fecha)}</div>`;
+    html+=`<div class="day-group"><div class="day-label">${fecha===today()?'🟢 Hoy · ':''}${fmtDate(fecha)}</div>`;
     byDay[fecha].forEach(m => {
       const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
       html+=`<div class="gasto-item" onclick="showDetail('${m.id}')">
@@ -641,29 +845,28 @@ function renderAhorro() {
   const extras = movimientos.filter(m=>m.type==='ingreso').reduce((a,m)=>a+m.monto,0);
   const disponible = Math.max(0, inicial - gastos + extras);
   const sugerido = Math.round(inicial * 0.2);
-  const pctSave = 20;
   const dash = Math.PI*2*68;
   content.innerHTML=`
     <div style="text-align:center;padding:20px 0 10px">
-      <div class="ahorro-ring">
-        <svg width="146" height="146" style="transform:rotate(-90deg)">
+      <div style="width:140px;height:140px;border-radius:50%;border:3px solid var(--bg3);display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 20px;position:relative;">
+        <svg width="146" height="146" style="position:absolute;top:-3px;left:-3px;transform:rotate(-90deg)">
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--bg4)" stroke-width="6"/>
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--teal)" stroke-width="6"
-            stroke-dasharray="${dash}" stroke-dashoffset="${dash*(1-pctSave/100)}" stroke-linecap="round"/>
+            stroke-dasharray="${dash}" stroke-dashoffset="${dash*0.8}" stroke-linecap="round"/>
         </svg>
-        <div class="ahorro-ring-inner">
-          <div class="ahorro-ring-pct" id="ring-pct">${pctSave}%</div>
-          <div class="ahorro-ring-label">sugerido</div>
+        <div style="position:relative;text-align:center">
+          <div style="font-size:28px;font-weight:600;color:var(--teal)" id="ring-pct">20%</div>
+          <div style="font-size:11px;color:var(--text3)">sugerido</div>
         </div>
       </div>
     </div>
     <div class="ahorro-tip">🎯 <strong>Meta sugerida:</strong> apartar <strong>${fmt(sugerido)}</strong> por quincena (20%). En 12 meses tendrías aprox. <strong>${fmt(sugerido*24)}</strong>.</div>
-    <div class="ahorro-tip" style="border-color:rgba(126,207,207,0.2)">💳 <strong>Disponible hoy:</strong> podrías guardar hasta <strong style="color:var(--teal)">${fmt(disponible)}</strong> considerando lo que ya gastaste.</div>
+    <div class="ahorro-tip" style="border-color:rgba(126,207,207,0.2)">💳 <strong>Disponible hoy:</strong> podrías guardar hasta <strong style="color:var(--teal)">${fmt(disponible)}</strong>.</div>
     <div class="section-title">AJUSTA TU META</div>
     <div style="padding:0 2px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:8px">
         <span>Porcentaje a ahorrar</span>
-        <span id="slider-pct-label" style="color:var(--green);font-weight:600">20%</span>
+        <span id="slider-pct-label" style="color:var(--teal);font-weight:600">20%</span>
       </div>
       <input type="range" min="5" max="50" step="5" value="20" id="ahorro-slider">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
@@ -741,12 +944,8 @@ function renderCatGrid() {
 }
 window.selectCat = id => { selectedCat=id; renderCatGrid(); };
 window.setType = t => { currentType=t; renderTypeToggle(); };
-window.closeModal = id => document.getElementById(id).classList.remove('open');
-window.openModal = id => document.getElementById(id).classList.add('open');
 
 renderCatGrid();
-
-// SERVICE WORKER
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
 </body>
