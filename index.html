@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1021">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoniFy">
+<link rel="manifest" href="manifest.json">
+<title>MoniFy</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="loader">
+  <img src="icon-192.png" style="width:80px;height:80px;border-radius:20px;margin-bottom:4px" onerror="this.style.display='none'">
+  <div class="loader-logo">MoniFy</div>
+  <div class="loader-spinner"></div>
+  <div class="loader-msg">Conectando...</div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <img src="icon-192.png" style="width:72px;height:72px;border-radius:18px;margin-bottom:12px" onerror="this.style.display='none'">
+  <div class="auth-logo">MoniFy</div>
+  <div class="auth-tagline">Tu control de quincena,<br>siempre contigo 💜</div>
+  <button class="auth-google-circle" onclick="loginGoogle()" title="Continuar con Google">
+    <svg width="22" height="22" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+  </button>
+  <div class="auth-divider">— o con correo —</div>
+  <div style="width:100%;text-align:left">
+    <div class="auth-switch-btns">
+      <button class="auth-tab-btn active-tab" id="tab-login" onclick="switchAuthMode('login')">Entrar</button>
+      <button class="auth-tab-btn inactive-tab" id="tab-register" onclick="switchAuthMode('register')">Crear cuenta</button>
+    </div>
+    <div id="login-fields">
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com"></div>
+      <div class="form-group"><label class="form-label">CONTRASEÑA</label><input class="form-input" type="password" id="auth-pass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="loginEmail()">Entrar</button>
+      <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
+    </div>
+    <div id="register-fields" style="display:none">
+      <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="reg-username" placeholder="¿Cómo te llamas?"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="reg-email" placeholder="tu@correo.com"></div>
+      <div class="form-group">
+        <label class="form-label">CONTRASEÑA</label>
+        <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20">
+        <div class="pass-hint" id="pass-hint"></div>
+      </div>
+      <button class="btn-primary" onclick="registerEmail()">Crear cuenta</button>
+    </div>
+    <div class="verify-banner" id="verify-banner" style="display:none"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-main" style="display:none;flex-direction:column;height:100dvh;">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-greeting">Hola, <span id="user-name-label">--</span> 👋</div>
+        <div class="header-logo">MoniFy</div>
+      </div>
+      <div class="header-right">
+        <div class="quincena-badge" id="quincena-badge-btn">📅 <span id="current-quincena-label">--</span></div>
+        <button class="avatar-btn" id="avatar-btn" onclick="openModal('modal-perfil')">?</button>
+      </div>
+    </div>
+  </div>
+  <div class="balance-section">
+    <div class="balance-card">
+      <div class="balance-grid">
+        <div><div class="balance-item-label">Inicio</div><div class="balance-item-value v-accent" id="saldo-inicial-display">$0</div></div>
+        <div><div class="balance-item-label">Disponible</div><div class="balance-item-value v-green" id="saldo-actual-display">$0</div></div>
+        <div><div class="balance-item-label">Gastado</div><div class="balance-item-value v-red" id="total-gastado-display">$0</div></div>
+        <div><div class="balance-item-label">Ahorrado</div><div class="balance-item-value v-teal" id="total-ahorrado-display">$0</div></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-labels"><span>Progreso del gasto</span><span id="progress-pct">0%</span></div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="savings-pill">
+    <div style="font-size:18px">🌱</div>
+    <div class="savings-text" id="savings-text">Crea una quincena para ver tu sugerencia de ahorro.</div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="movimientos">Movimientos</div>
+    <div class="nav-tab" data-tab="resumen">Resumen</div>
+    <div class="nav-tab" data-tab="ahorro">Ahorro</div>
+  </div>
+  <div class="content" id="main-content"></div>
+  <button class="fab" id="fab-btn">＋ Agregar movimiento</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL NUEVO MOVIMIENTO -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-add-title">Nuevo movimiento</div>
+    <div class="type-toggle">
+      <button class="type-btn active-gasto" id="type-gasto" onclick="setType('gasto')">💸 Gasto</button>
+      <button class="type-btn" id="type-ingreso" onclick="setType('ingreso')">💰 Extra</button>
+    </div>
+    <!-- Destino solo aparece si es ingreso -->
+    <div id="destino-wrap" style="display:none;margin-bottom:14px">
+      <div class="form-label">¿A DÓNDE VA ESTE EXTRA?</div>
+      <div class="destino-toggle">
+        <button class="destino-btn active-ahorro" id="dest-ahorro" onclick="setDestino('ahorro')">🌱 Al ahorro</button>
+        <button class="destino-btn" id="dest-disp" onclick="setDestino('disponible')">💰 Al disponible</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">MONTO *</label><input class="form-input" type="number" inputmode="decimal" id="input-monto" placeholder="$0.00"></div>
+    <div class="form-group"><label class="form-label">DESCRIPCIÓN (opcional)</label><input class="form-input" type="text" id="input-desc" placeholder="¿De qué fue?"></div>
+    <div id="cat-wrap" class="form-group"><label class="form-label">CATEGORÍA</label><div class="cat-grid" id="cat-grid"></div></div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="input-fecha"></div>
+    <button class="btn-primary" onclick="saveMovimiento()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-add')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-title">Detalle</div>
+    <div id="detail-content"></div>
+    <button class="btn-danger" id="detail-delete-btn">Eliminar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN GENÉRICA -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirm-icon">⚠️</div>
+      <div class="confirm-msg" id="confirm-msg"></div>
+      <div class="confirm-sub" id="confirm-sub"></div>
+    </div>
+    <button class="btn-danger" id="confirm-ok-btn">Confirmar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-confirm')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL QUINCENAS -->
+<div class="modal-overlay" id="modal-quincena">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Mis Quincenas</div>
+    <div id="quincena-list"></div>
+    <div class="section-title">Nueva Quincena</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">INICIO</label><input class="form-input" type="date" id="q-inicio"></div>
+      <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="q-fin"></div>
+    </div>
+    <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="q-saldo" placeholder="$0.00"></div>
+    <button class="btn-primary" onclick="createQuincena()">Crear quincena</button>
+    <button class="btn-secondary" onclick="closeModal('modal-quincena')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR QUINCENA -->
+<div class="modal-overlay" id="modal-edit-q">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar quincena</div>
+    <input type="hidden" id="edit-q-id">
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">INICIO</label><input class="form-input" type="date" id="edit-q-inicio"></div>
+      <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="edit-q-fin"></div>
+    </div>
+    <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="edit-q-saldo" placeholder="$0.00"></div>
+    <button class="btn-warn" onclick="confirmEditQuincena()">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-q')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PERFIL -->
+<div class="modal-overlay" id="modal-perfil">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="profile-header">
+      <div class="profile-avatar" id="perfil-avatar">?</div>
+      <div class="profile-name" id="perfil-name">--</div>
+      <div class="profile-email-txt" id="perfil-email">--</div>
+    </div>
+    <div class="profile-card">
+      <div class="profile-card-title">Editar perfil</div>
+      <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="perfil-username-input" placeholder="Tu nombre"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="perfil-email-input" disabled></div>
+      <button class="btn-primary" onclick="saveProfile()" style="margin-top:12px">Guardar cambios</button>
+      <div class="save-indicator" id="save-indicator">✓ Guardado</div>
+    </div>
+    <button class="btn-danger" onclick="confirmLogout()">Cerrar sesión</button>
+    <button class="btn-secondary" onclick="closeModal('modal-perfil')">Cancelar</button>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
