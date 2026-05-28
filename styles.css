@@ -16,7 +16,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
-#app-shell{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;position:relative;}
+#app-main{max-width:430px;margin:0 auto;position:relative;}
 
 /* LOADER */
 #loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
@@ -54,6 +54,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .btn-secondary{width:100%;background:var(--bg4);color:var(--text2);border:none;border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:6px;}
 .btn-danger{width:100%;background:transparent;color:var(--red);border:1px solid rgba(224,133,133,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
 .btn-warn{width:100%;background:rgba(232,201,122,0.1);color:var(--amber);border:1px solid rgba(232,201,122,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
+.btn-liquidar{width:100%;background:rgba(93,245,160,0.08);color:var(--green);border:1px solid rgba(93,245,160,0.25);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
 
 /* VERIFY BANNER */
 .verify-banner{background:rgba(232,201,122,0.1);border:1px solid rgba(232,201,122,0.3);border-radius:var(--radius-sm);padding:14px;margin-top:16px;font-size:13px;color:var(--amber);line-height:1.6;text-align:center;}
