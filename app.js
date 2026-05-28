@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where, orderBy, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -17,6 +17,9 @@ const db = getFirestore(fbApp);
 
 // Sesión persistente — no cierra aunque cierres la app
 setPersistence(auth, browserLocalPersistence);
+
+// Handle Google redirect result on page load
+getRedirectResult(auth).catch(() => {});
 
 // ── CATS ──────────────────────────────────────────────
 const CATS = [
@@ -92,7 +95,7 @@ document.getElementById('reg-pass').addEventListener('input', function() {
 
 // ── GOOGLE ────────────────────────────────────────────
 window.loginGoogle = async () => {
-  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  try { await signInWithRedirect(auth, new GoogleAuthProvider()); }
   catch(e) { showToast('Error al iniciar con Google 😕'); }
 };
 
