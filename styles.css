@@ -201,5 +201,62 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 .save-indicator{font-size:12px;color:var(--teal);margin-top:8px;text-align:center;height:18px;transition:opacity 0.3s;opacity:0;}
 
 /* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);z-index:500;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;max-width:calc(100% - 40px);text-align:center;}
-.toast.show{opacity:1;}
+.toast{position:fixed;top:-60px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--text);z-index:500;opacity:0;transition:top 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s;pointer-events:none;white-space:nowrap;max-width:calc(100% - 40px);text-align:center;}
+.toast.show{opacity:1;top:20px;}
+/* PRÉSTAMOS */
+.prestamo-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;cursor:pointer;transition:border-color 0.2s;}
+.prestamo-card:active{border-color:var(--border2);}
+.prestamo-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.prestamo-nombre{font-size:16px;font-weight:600;color:var(--text);}
+.prestamo-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;}
+.prestamo-status.activo{background:rgba(63,232,216,0.1);color:var(--teal);border:1px solid rgba(63,232,216,0.2);}
+.prestamo-status.liquidado{background:rgba(93,245,160,0.1);color:var(--green);border:1px solid rgba(93,245,160,0.2);}
+.prestamo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.prestamo-stat{background:var(--bg3);border-radius:var(--radius-sm);padding:10px;}
+.prestamo-stat-label{font-size:10px;color:var(--text3);margin-bottom:3px;letter-spacing:0.5px;}
+.prestamo-stat-value{font-size:15px;font-weight:600;}
+.prestamo-progress-wrap{margin-bottom:10px;}
+.prestamo-progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;}
+.prestamo-progress-track{background:var(--bg4);border-radius:4px;height:5px;}
+.prestamo-progress-fill{height:5px;border-radius:4px;background:var(--grad2);transition:width 0.4s;}
+.prestamo-actions{display:flex;gap:6px;}
+.prestamo-action-btn{flex:1;padding:8px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;text-align:center;}
+.prestamos-summary{background:var(--bg3);border:1px solid rgba(63,232,216,0.15);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+.prestamos-summary-title{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:12px;text-transform:uppercase;}
+.prestamos-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.ps-item{text-align:center;}
+.ps-label{font-size:10px;color:var(--text3);margin-bottom:4px;}
+.ps-value{font-size:14px;font-weight:600;}
+.pago-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.pago-item:last-child{border-bottom:none;}
+
+/* MODAL CENTRADO (confirmaciones) */
+.modal-overlay.centered {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.centered .modal {
+  border-radius: 20px;
+  max-width: 360px;
+  width: 100%;
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.32,0.72,0,1), opacity 0.25s;
+  padding: 24px 24px 28px;
+}
+.modal-overlay.centered.open .modal {
+  transform: scale(1);
+  opacity: 1;
+}
+.confirm-box {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.confirm-icon { font-size: 42px; margin-bottom: 12px; }
+.confirm-msg { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.5; }
+.confirm-sub { font-size: 13px; color: var(--text3); margin-top: 8px; line-height: 1.5; }
