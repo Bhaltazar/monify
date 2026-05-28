@@ -650,9 +650,12 @@ function calcPrestamo(capital, interes){
   return {total, ganancia, quincenal, mensual, anual};
 }
 
-// Preview on input change
-['p-capital','p-interes'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePrestamoPreview);
+// Preview on input change — wait for DOM
+document.addEventListener('DOMContentLoaded', () => {
+  ['p-capital','p-interes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updatePrestamoPreview);
+  });
 });
 function updatePrestamoPreview(){
   const capital = parseFloat(document.getElementById('p-capital').value);
