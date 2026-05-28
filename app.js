@@ -415,7 +415,7 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-  document.getElementById('savings-pill').style.display='none';
+  const sp=document.getElementById('savings-pill'); if(sp)sp.style.display='none';
 }
 
 function renderMovimientos(){
