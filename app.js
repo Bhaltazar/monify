@@ -415,9 +415,7 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-  document.getElementById('savings-text').innerHTML=inicial>0
-    ?`💡 Si apartas <strong>${fmt(inicial*0.2)}</strong> (20%) desde el inicio, ahorras sin sentirlo.`
-    :'Crea una quincena para ver tu sugerencia de ahorro.';
+  document.getElementById('savings-pill').style.display='none';
 }
 
 function renderMovimientos(){
@@ -558,7 +556,6 @@ function renderAhorro(){
       </div>
     </div>
     <div class="ahorro-tip">🎯 <strong>Meta sugerida:</strong> apartar <strong>${fmt(sugerido)}</strong> por quincena (20%). En 12 meses tendrías aprox. <strong>${fmt(sugerido*24)}</strong>.</div>
-    <div class="ahorro-tip" style="border-color:rgba(126,207,207,0.2)">💳 <strong>Disponible hoy:</strong> podrías guardar hasta <strong style="color:var(--teal)">${fmt(disponible)}</strong>.</div>
     <div class="section-title">Ajusta tu meta</div>
     <div style="padding:0 2px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:8px">
