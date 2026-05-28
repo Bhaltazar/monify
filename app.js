@@ -4,7 +4,7 @@ import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1LtTOBsbEoeg6OJzb9hCN2HfsxOGTV4I",
-  authDomain: "monify-3c055.firebaseapp.com",
+  authDomain: "bhaltazar.github.io",
   projectId: "monify-3c055",
   storageBucket: "monify-3c055.firebasestorage.app",
   messagingSenderId: "295735096915",
@@ -18,8 +18,18 @@ const db = getFirestore(fbApp);
 // Sesión persistente — no cierra aunque cierres la app
 setPersistence(auth, browserLocalPersistence);
 
-// Handle Google redirect result on page load
-getRedirectResult(auth).catch(() => {});
+// Handle Google redirect result when page loads after redirect
+getRedirectResult(auth).then(result => {
+  if(result && result.user) {
+    // User signed in via redirect — onAuthStateChanged will handle the rest
+  }
+}).catch(e => {
+  if(e.code !== 'auth/no-current-user') {
+    console.error('Redirect error:', e);
+  }
+});
+
+
 
 // ── CATS ──────────────────────────────────────────────
 const CATS = [
@@ -95,8 +105,10 @@ document.getElementById('reg-pass').addEventListener('input', function() {
 
 // ── GOOGLE ────────────────────────────────────────────
 window.loginGoogle = async () => {
-  try { await signInWithRedirect(auth, new GoogleAuthProvider()); }
-  catch(e) { showToast('Error al iniciar con Google 😕'); }
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithRedirect(auth, provider);
+  } catch(e) { showToast('Error al iniciar con Google 😕'); }
 };
 
 // ── EMAIL LOGIN ───────────────────────────────────────
