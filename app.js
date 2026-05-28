@@ -266,17 +266,21 @@ window.confirmEditQuincena = () => {
   const fin=document.getElementById('edit-q-fin').value;
   const saldo=parseFloat(document.getElementById('edit-q-saldo').value);
   if(!inicio||!fin||isNaN(saldo)){showToast('Completa todos los campos');return;}
-  showConfirm('¿Guardar cambios en esta quincena?','Los saldos se recalcularán con el nuevo monto inicial.','✏️',async()=>{
-    try {
-      await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo});
-      closeModal('modal-edit-q');
-      showToast('✅ Quincena actualizada');
-    } catch(e){showToast('Error al actualizar');}
-  },'btn-warn');
+  closeModal('modal-edit-q');
+  setTimeout(() => {
+    showConfirm('¿Guardar cambios en esta quincena?','Los saldos se recalcularán con el nuevo monto inicial.','✏️',async()=>{
+      try {
+        await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo});
+        showToast('✅ Quincena actualizada');
+      } catch(e){showToast('Error al actualizar');}
+    },'btn-warn');
+  }, 350);
 };
 
 window.confirmDeleteQuincena = id => {
   const q=quincenas.find(x=>x.id===id); if(!q)return;
+  closeModal('modal-quincena');
+  setTimeout(() => {
   showConfirm(
     `¿Eliminar quincena ${quincenaLabel(q)}?`,
     'Se eliminarán también todos sus movimientos. Esta acción no se puede deshacer.',
@@ -291,6 +295,7 @@ window.confirmDeleteQuincena = id => {
       } catch(e){showToast('Error al eliminar');}
     }
   );
+  }, 350);
 };
 
 function renderQuincenaList(){
@@ -320,15 +325,23 @@ window.saveMovimiento = async () => {
   const fecha=document.getElementById('input-fecha').value||today();
   const destino=currentType==='ingreso'?currentDestino:'gasto';
   try {
-    await addDoc(collection(db,'movimientos'),{
-      uid:currentUser.uid, quincenaId:currentQuincenaId,
-      monto, desc, fecha, cat:selectedCat,
-      type:currentType, destino, createdAt:Date.now()
-    });
-    closeModal('modal-add');
-    if(currentType==='gasto') showToast('💸 Gasto registrado');
-    else if(destino==='ahorro') showToast('🌱 Extra guardado en tu ahorro');
-    else showToast('💰 Extra sumado a tu disponible');
+    if(editingMovId){
+      await updateDoc(doc(db,'movimientos',editingMovId),{monto,desc,fecha,cat:selectedCat,type:currentType,destino});
+      editingMovId=null;
+      document.getElementById('modal-add-title').textContent='Nuevo movimiento';
+      closeModal('modal-add');
+      showToast('✅ Movimiento actualizado');
+    } else {
+      await addDoc(collection(db,'movimientos'),{
+        uid:currentUser.uid, quincenaId:currentQuincenaId,
+        monto, desc, fecha, cat:selectedCat,
+        type:currentType, destino, createdAt:Date.now()
+      });
+      closeModal('modal-add');
+      if(currentType==='gasto') showToast('💸 Gasto registrado');
+      else if(destino==='ahorro') showToast('🌱 Extra guardado en tu ahorro');
+      else showToast('💰 Extra sumado a tu disponible');
+    }
   } catch(e){showToast('Error al guardar');}
 };
 
@@ -346,13 +359,38 @@ window.showDetail = id => {
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
-    showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
-      await deleteDoc(doc(db,'movimientos',id));
-      closeModal('modal-detail');
-      showToast('🗑️ Movimiento eliminado');
-    });
+    closeModal('modal-detail');
+    setTimeout(()=>{
+      showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
+        await deleteDoc(doc(db,'movimientos',id));
+        showToast('🗑️ Movimiento eliminado');
+      });
+    },350);
+  };
+  document.getElementById('detail-edit-btn').onclick=()=>{
+    openEditMovimiento(id);
   };
   openModal('modal-detail');
+};
+
+// ── EDIT MOVIMIENTO ──────────────────────────────────────
+let editingMovId = null;
+
+window.openEditMovimiento = id => {
+  const m = movimientos.find(x=>x.id===id); if(!m)return;
+  editingMovId = id;
+  currentType = m.type;
+  currentDestino = m.destino || (m.type==='ingreso'?'ahorro':'gasto');
+  selectedCat = m.cat || 'otro';
+  document.getElementById('input-monto').value = m.monto;
+  document.getElementById('input-desc').value = m.desc || '';
+  document.getElementById('input-fecha').value = m.fecha;
+  document.getElementById('modal-add-title').textContent = 'Editar movimiento';
+  document.getElementById('destino-wrap').style.display = m.type==='ingreso'?'block':'none';
+  document.getElementById('cat-wrap').style.display = m.type==='gasto'?'block':'none';
+  renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
+  closeModal('modal-detail');
+  openModal('modal-add');
 };
 
 // ── RENDER ────────────────────────────────────────────
@@ -448,10 +486,18 @@ function renderResumen(){
         <div><div style="font-size:13px;color:var(--text)">${m.desc||c.label}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(m.fecha)}</div></div>
         <div style="font-size:13px;font-weight:600;color:var(--red)">-${fmt(m.monto)}</div>
       </div>`).join('');
+      const pctCat=total>0?Math.round((t/total)*100):0;
       return `<div class="cat-detail-card">
         <div class="cat-detail-header">
           <div class="cat-detail-emoji">${c.emoji}</div>
-          <div><div class="cat-detail-name">${c.label}</div><div class="cat-detail-total">${fmt(t)} total · ${movs.length} movimiento${movs.length!==1?'s':''}</div></div>
+          <div>
+            <div class="cat-detail-name">${c.label}</div>
+            <div class="cat-detail-total">${movs.length} movimiento${movs.length!==1?'s':''}</div>
+          </div>
+          <div style="text-align:right;margin-left:auto">
+            <div style="font-size:18px;font-weight:700;color:${CAT_COLORS[c.id]}">${fmt(t)}</div>
+            <div style="font-size:11px;color:var(--text3)">${pctCat}% del total</div>
+          </div>
         </div>${items}
       </div>`;
     }).join('');
@@ -533,8 +579,11 @@ function startPrestamosListener(){
 }
 
 function calcPrestamo(capital, interes){
-  const total=capital*(1+interes/100);
-  return {total, ganancia:total-capital, quincenal:total/2, mensual:total, anual:total*12};
+  const ganancia = capital * (interes/100);
+  const quincenal = capital + ganancia; // cobro completo cada quincena
+  const mensual = quincenal * 2;        // 2 quincenas = 1 mes
+  const anual = quincenal * 24;         // 24 quincenas = 1 año
+  return {total: quincenal, ganancia, quincenal, mensual, anual};
 }
 
 function updatePrestamoPreview(){
@@ -587,7 +636,7 @@ window.showPrestamoDetail = async id => {
   const pagos=pagosSnap.docs.map(d=>({id:d.id,...d.data()}));
   const totalPagado=pagos.reduce((a,pg)=>a+pg.monto,0);
   const pendiente=Math.max(0,p.totalACobrar-totalPagado);
-  const pct=p.totalACobrar>0?Math.min(100,Math.round((totalPagado/p.totalACobrar)*100)):0;
+  const pct=p.totalACobrar>0?Math.min(100,Math.floor((totalPagado/p.totalACobrar)*100)):0;
   const pagosHTML=pagos.length>0?pagos.map(pg=>`
     <div class="pago-item">
       <div><div style="font-size:13px;color:var(--text)">${pg.nota||'Pago recibido'}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(pg.fecha)}</div></div>
@@ -616,20 +665,24 @@ window.showPrestamoDetail = async id => {
   document.getElementById('btn-registrar-pago').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-liquidar-prestamo').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-liquidar-prestamo').onclick=()=>{
-    showConfirm('¿Marcar como liquidado?','Esto cerrará el préstamo como pagado en su totalidad.','✅',async()=>{
-      await updateDoc(doc(db,'prestamos',id),{status:'liquidado'});
-      closeModal('modal-prestamo-detail');
-      showToast('✅ Préstamo liquidado');
-    },'btn-primary');
+    closeModal('modal-prestamo-detail');
+    setTimeout(()=>{
+      showConfirm('¿Marcar como liquidado?','Esto cerrará el préstamo como pagado en su totalidad.','✅',async()=>{
+        await updateDoc(doc(db,'prestamos',id),{status:'liquidado'});
+        showToast('✅ Préstamo liquidado');
+      },'btn-primary');
+    },350);
   };
   document.getElementById('btn-delete-prestamo').onclick=()=>{
-    showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus pagos registrados.','🗑️',async()=>{
-      const ps=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
-      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
-      await deleteDoc(doc(db,'prestamos',id));
-      closeModal('modal-prestamo-detail');
-      showToast('🗑️ Préstamo eliminado');
-    });
+    closeModal('modal-prestamo-detail');
+    setTimeout(()=>{
+      showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus pagos registrados.','🗑️',async()=>{
+        const ps=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
+        await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
+        await deleteDoc(doc(db,'prestamos',id));
+        showToast('🗑️ Préstamo eliminado');
+      });
+    },350);
   };
   openModal('modal-prestamo-detail');
 };
@@ -734,13 +787,15 @@ document.getElementById('fab-btn').addEventListener('click',()=>{
   if(currentTab==='prestamos'){ clearPrestamoForm(); openModal('modal-prestamo'); return; }
   const q=getCurrentQ();
   if(!q){renderQuincenaList();openModal('modal-quincena');return;}
+  editingMovId=null;
+  document.getElementById('modal-add-title').textContent='Nuevo movimiento';
   currentType='gasto'; currentDestino='ahorro'; selectedCat='otro';
   document.getElementById('input-monto').value='';
   document.getElementById('input-desc').value='';
   document.getElementById('input-fecha').value=today();
   document.getElementById('destino-wrap').style.display='none';
   document.getElementById('cat-wrap').style.display='block';
-  renderTypeToggle(); renderCatGrid();
+  renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
   openModal('modal-add');
 });
 
