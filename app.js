@@ -1,10 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where, orderBy, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1LtTOBsbEoeg6OJzb9hCN2HfsxOGTV4I",
-  authDomain: "bhaltazar.github.io",
+  authDomain: "monify-3c055.firebaseapp.com",
   projectId: "monify-3c055",
   storageBucket: "monify-3c055.firebasestorage.app",
   messagingSenderId: "295735096915",
@@ -18,63 +18,6 @@ const db = getFirestore(fbApp);
 // Sesión persistente — no cierra aunque cierres la app
 setPersistence(auth, browserLocalPersistence);
 
-// Handle Google redirect result when page loads after redirect
-getRedirectResult(auth).then(result => {
-  if(result && result.user) {
-    // User signed in via redirect — onAuthStateChanged will handle the rest
-  }
-}).catch(e => {
-  if(e.code !== 'auth/no-current-user') {
-    console.error('Redirect error:', e);
-  }
-});
-
-
-
-// ── CATS ──────────────────────────────────────────────
-const CATS = [
-  {id:'comida',    label:'Comida',     emoji:'🍔'},
-  {id:'transporte',label:'Transporte', emoji:'🚌'},
-  {id:'escuela',   label:'Escuela',    emoji:'🎓'},
-  {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'ropa',      label:'Ropa',       emoji:'👕'},
-  {id:'pareja',    label:'Pareja',     emoji:'💑'},
-  {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
-  {id:'otro',      label:'Otro',       emoji:'📦'},
-];
-const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',ropa:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
-
-// ── STATE ─────────────────────────────────────────────
-let currentUser = null;
-let quincenas = [];
-let movimientos = [];
-let currentQuincenaId = null;
-let currentType = 'gasto';
-let currentDestino = 'ahorro';
-let selectedCat = 'otro';
-let currentTab = 'movimientos';
-let resumenTab = 'general';
-let unsubMovs = null;
-let unsubQs = null;
-let unsubPrestamos = null;
-let prestamos = [];
-let currentPrestamoId = null;
-
-// ── UTILS ─────────────────────────────────────────────
-const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtDate = s => { const [y,mo,d]=s.split('-'); const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return `${parseInt(d)} ${ms[parseInt(mo)-1]}`; };
-const today = () => new Date().toISOString().split('T')[0];
-const quincenaLabel = q => q ? `${fmtDate(q.inicio)} – ${fmtDate(q.fin)}` : '--';
-const getInitials = n => n ? n.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
-
-function showToast(msg, dur=2800) {
-  const t = document.getElementById('toast');
-  t.classList.remove('show');
-  t.textContent = msg;
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), dur);
-  }));
 }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -104,12 +47,6 @@ document.getElementById('reg-pass').addEventListener('input', function() {
 });
 
 // ── GOOGLE ────────────────────────────────────────────
-window.loginGoogle = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
-  } catch(e) { showToast('Error al iniciar con Google 😕'); }
-};
 
 // ── EMAIL LOGIN ───────────────────────────────────────
 window.loginEmail = async () => {
