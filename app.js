@@ -44,6 +44,7 @@ let unsubQs = null;
 let unsubPrestamos = null;
 let prestamos = [];
 let currentPrestamoId = null;
+let editingMovId = null;
 
 // ── UTILS ─────────────────────────────────────────────
 const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -225,7 +226,7 @@ function startMovsListener(){
   if(unsubMovs)unsubMovs();
   if(!currentQuincenaId){movimientos=[];render();return;}
   unsubMovs=onSnapshot(
-    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc')),
+    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc'),orderBy('createdAt','desc')),
     snap=>{movimientos=snap.docs.map(d=>({id:d.id,...d.data()}));render();}
   );
 }
@@ -267,35 +268,35 @@ window.confirmEditQuincena = () => {
   const saldo=parseFloat(document.getElementById('edit-q-saldo').value);
   if(!inicio||!fin||isNaN(saldo)){showToast('Completa todos los campos');return;}
   closeModal('modal-edit-q');
-  setTimeout(() => {
+  setTimeout(()=>{
     showConfirm('¿Guardar cambios en esta quincena?','Los saldos se recalcularán con el nuevo monto inicial.','✏️',async()=>{
       try {
         await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo});
         showToast('✅ Quincena actualizada');
       } catch(e){showToast('Error al actualizar');}
     },'btn-warn');
-  }, 350);
+  },350);
 };
 
 window.confirmDeleteQuincena = id => {
   const q=quincenas.find(x=>x.id===id); if(!q)return;
   closeModal('modal-quincena');
-  setTimeout(() => {
-  showConfirm(
-    `¿Eliminar quincena ${quincenaLabel(q)}?`,
-    'Se eliminarán también todos sus movimientos. Esta acción no se puede deshacer.',
-    '🗑️',
-    async()=>{
-      try {
-        const snap=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
-        await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
-        await deleteDoc(doc(db,'quincenas',id));
-        if(currentQuincenaId===id){ currentQuincenaId=null; if(unsubMovs)unsubMovs(); movimientos=[]; }
-        showToast('🗑️ Quincena eliminada');
-      } catch(e){showToast('Error al eliminar');}
-    }
-  );
-  }, 350);
+  setTimeout(()=>{
+    showConfirm(
+      `¿Eliminar quincena ${quincenaLabel(q)}?`,
+      'Se eliminarán también todos sus movimientos. Esta acción no se puede deshacer.',
+      '🗑️',
+      async()=>{
+        try {
+          const snap=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
+          await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
+          await deleteDoc(doc(db,'quincenas',id));
+          if(currentQuincenaId===id){ currentQuincenaId=null; if(unsubMovs)unsubMovs(); movimientos=[]; }
+          showToast('🗑️ Quincena eliminada');
+        } catch(e){showToast('Error al eliminar');}
+      }
+    );
+  },350);
 };
 
 function renderQuincenaList(){
@@ -358,12 +359,15 @@ window.showDetail = id => {
       ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💰 Fue al disponible'}</div>`:''}
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
+  // BUG FIX: cerrar modal primero, luego confirmar con setTimeout
   document.getElementById('detail-delete-btn').onclick=()=>{
     closeModal('modal-detail');
     setTimeout(()=>{
       showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
-        await deleteDoc(doc(db,'movimientos',id));
-        showToast('🗑️ Movimiento eliminado');
+        try {
+          await deleteDoc(doc(db,'movimientos',id));
+          showToast('🗑️ Movimiento eliminado');
+        } catch(e){showToast('Error al eliminar');}
       });
     },350);
   };
@@ -373,21 +377,19 @@ window.showDetail = id => {
   openModal('modal-detail');
 };
 
-// ── EDIT MOVIMIENTO ──────────────────────────────────────
-let editingMovId = null;
-
+// ── EDIT MOVIMIENTO ───────────────────────────────────
 window.openEditMovimiento = id => {
-  const m = movimientos.find(x=>x.id===id); if(!m)return;
-  editingMovId = id;
-  currentType = m.type;
-  currentDestino = m.destino || (m.type==='ingreso'?'ahorro':'gasto');
-  selectedCat = m.cat || 'otro';
-  document.getElementById('input-monto').value = m.monto;
-  document.getElementById('input-desc').value = m.desc || '';
-  document.getElementById('input-fecha').value = m.fecha;
-  document.getElementById('modal-add-title').textContent = 'Editar movimiento';
-  document.getElementById('destino-wrap').style.display = m.type==='ingreso'?'block':'none';
-  document.getElementById('cat-wrap').style.display = m.type==='gasto'?'block':'none';
+  const m=movimientos.find(x=>x.id===id); if(!m)return;
+  editingMovId=id;
+  currentType=m.type;
+  currentDestino=m.destino==='gasto'?'ahorro':m.destino;
+  selectedCat=m.cat||'otro';
+  document.getElementById('input-monto').value=m.monto;
+  document.getElementById('input-desc').value=m.desc||'';
+  document.getElementById('input-fecha').value=m.fecha;
+  document.getElementById('modal-add-title').textContent='Editar movimiento';
+  document.getElementById('destino-wrap').style.display=m.type==='ingreso'?'block':'none';
+  document.getElementById('cat-wrap').style.display=m.type==='gasto'?'block':'none';
   renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
   closeModal('modal-detail');
   openModal('modal-add');
@@ -465,9 +467,17 @@ function renderResumen(){
     let rows=sorted.map(c=>{
       const t=byCat[c.id].reduce((a,m)=>a+m.monto,0);
       const pct=total>0?Math.round((t/total)*100):0;
+      // Barra de progreso por categoría
       return `<div class="resumen-row">
-        <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
-        <div style="font-size:13px;font-weight:500;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
+        <div style="width:100%">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
+            <div style="font-size:13px;font-weight:600;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
+          </div>
+          <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden">
+            <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pct}%;transition:width 0.4s ease"></div>
+          </div>
+        </div>
       </div>`;
     }).join('');
     if(!rows)rows='<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin gastos registrados</div>';
@@ -482,23 +492,27 @@ function renderResumen(){
     const catCards=CATS.filter(c=>byCat[c.id].length>0).map(c=>{
       const movs=byCat[c.id].sort((a,b)=>b.fecha.localeCompare(a.fecha));
       const t=movs.reduce((a,m)=>a+m.monto,0);
+      const pctCat=total>0?Math.round((t/total)*100):0;
       const items=movs.map(m=>`<div class="cat-mov-item">
         <div><div style="font-size:13px;color:var(--text)">${m.desc||c.label}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(m.fecha)}</div></div>
         <div style="font-size:13px;font-weight:600;color:var(--red)">-${fmt(m.monto)}</div>
       </div>`).join('');
-      const pctCat=total>0?Math.round((t/total)*100):0;
       return `<div class="cat-detail-card">
         <div class="cat-detail-header">
           <div class="cat-detail-emoji">${c.emoji}</div>
-          <div>
+          <div style="flex:1">
             <div class="cat-detail-name">${c.label}</div>
             <div class="cat-detail-total">${movs.length} movimiento${movs.length!==1?'s':''}</div>
           </div>
-          <div style="text-align:right;margin-left:auto">
+          <div style="text-align:right">
             <div style="font-size:18px;font-weight:700;color:${CAT_COLORS[c.id]}">${fmt(t)}</div>
             <div style="font-size:11px;color:var(--text3)">${pctCat}% del total</div>
           </div>
-        </div>${items}
+        </div>
+        <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden;margin-bottom:10px">
+          <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pctCat}%;transition:width 0.4s ease"></div>
+        </div>
+        ${items}
       </div>`;
     }).join('');
     content.innerHTML=tabs+(catCards||'<div class="empty-state"><p>Sin gastos registrados</p></div>');
@@ -578,12 +592,16 @@ function startPrestamosListener(){
   );
 }
 
+// BUG FIX: calcPrestamo corregido
+// quincenal = solo el interés (lo que cobras cada 15 días)
+// mensual   = quincenal * 2 (dos quincenas)
+// El capital NO se incluye en quincenal/mensual, es aparte
 function calcPrestamo(capital, interes){
-  const ganancia = capital * (interes/100);
-  const quincenal = capital + ganancia; // cobro completo cada quincena
-  const mensual = quincenal * 2;        // 2 quincenas = 1 mes
-  const anual = quincenal * 24;         // 24 quincenas = 1 año
-  return {total: quincenal, ganancia, quincenal, mensual, anual};
+  const ganancia = capital * (interes / 100);   // interés total
+  const quincenal = ganancia;                    // cobras el interés cada quincena
+  const mensual = quincenal * 2;                 // 2 quincenas = 1 mes
+  const anual = quincenal * 24;                  // 24 quincenas = 1 año
+  return { total: capital + ganancia, ganancia, quincenal, mensual, anual };
 }
 
 function updatePrestamoPreview(){
@@ -609,10 +627,14 @@ window.savePrestamo = async () => {
   if(!nombre){showToast('Ingresa el nombre del deudor');return;}
   if(!capital||capital<=0){showToast('Ingresa el capital prestado');return;}
   const calc=calcPrestamo(capital,interes);
-  const data={uid:currentUser.uid,nombre,capital,interes,fecha,notas,
-    totalACobrar:calc.total,ganancia:calc.ganancia,
-    quincenal:calc.quincenal,mensual:calc.mensual,
-    pagado:0,status:'activo',createdAt:editId?Date.now():Date.now()};
+  // BUG FIX: no sobreescribir createdAt al editar
+  const data={
+    uid:currentUser.uid, nombre, capital, interes, fecha, notas,
+    totalACobrar: calc.total, ganancia: calc.ganancia,
+    quincenal: calc.quincenal, mensual: calc.mensual,
+    pagado: 0, status: 'activo',
+    ...(editId ? {} : {createdAt: Date.now()})
+  };
   try {
     if(editId){ await updateDoc(doc(db,'prestamos',editId),data); showToast('✅ Préstamo actualizado'); }
     else { await addDoc(collection(db,'prestamos'),data); showToast('💸 Préstamo registrado'); }
@@ -632,38 +654,71 @@ function clearPrestamoForm(){
 window.showPrestamoDetail = async id => {
   currentPrestamoId=id;
   const p=prestamos.find(x=>x.id===id); if(!p)return;
-  const pagosSnap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
-  const pagos=pagosSnap.docs.map(d=>({id:d.id,...d.data()}));
-  const totalPagado=pagos.reduce((a,pg)=>a+pg.monto,0);
-  const pendiente=Math.max(0,p.totalACobrar-totalPagado);
-  const pct=p.totalACobrar>0?Math.min(100,Math.floor((totalPagado/p.totalACobrar)*100)):0;
-  const pagosHTML=pagos.length>0?pagos.map(pg=>`
-    <div class="pago-item">
-      <div><div style="font-size:13px;color:var(--text)">${pg.nota||'Pago recibido'}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(pg.fecha)}</div></div>
-      <div style="font-size:13px;font-weight:600;color:var(--green)">+${fmt(pg.monto)}</div>
-    </div>`).join('')
-    :'<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin pagos registrados aún</div>';
+
+  // Traer todos los registros (intereses + abonos)
+  const registrosSnap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
+  const registros=registrosSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+  // Separar intereses de abonos al capital
+  const intereses=registros.filter(r=>r.tipoRegistro==='interes');
+  const abonos=registros.filter(r=>r.tipoRegistro!=='interes');
+
+  const totalInteresesCobrados=intereses.reduce((a,r)=>a+r.monto,0);
+  const totalAbonado=abonos.reduce((a,r)=>a+r.monto,0);
+
+  // BUG FIX: pendiente con toFixed para evitar decimales flotantes
+  const pendienteCapital=Math.max(0, parseFloat((p.capital - totalAbonado).toFixed(2)));
+  const pct=p.capital>0?Math.min(100,Math.floor((totalAbonado/p.capital)*100)):0;
+
+  // Historial unificado ordenado por fecha
+  const histHTML=registros.length>0?registros.map(r=>{
+    const esInteres=r.tipoRegistro==='interes';
+    return `<div class="pago-item">
+      <div>
+        <div style="font-size:13px;color:var(--text)">${r.nota||(esInteres?'Interés cobrado':'Abono al capital')}</div>
+        <div style="font-size:11px;margin-top:2px">
+          <span style="background:${esInteres?'rgba(232,201,122,0.15)':'rgba(63,232,216,0.12)'};color:${esInteres?'var(--amber)':'var(--teal)'};border-radius:4px;padding:1px 6px;font-size:10px">${esInteres?'🔄 Interés':'💵 Abono'}</span>
+          <span style="color:var(--text3);margin-left:6px">${fmtDate(r.fecha)}</span>
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:${esInteres?'var(--amber)':'var(--green)'}">+${fmt(r.monto)}</div>
+    </div>`;
+  }).join('')
+  :'<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin registros aún</div>';
+
   document.getElementById('detail-prestamo-nombre').textContent=p.nombre;
   document.getElementById('detail-prestamo-content').innerHTML=`
     <div class="prestamo-grid" style="margin-bottom:12px">
       <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
       <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">POR QUINCENA</div><div class="prestamo-stat-value" style="color:var(--accent)">${fmt(p.quincenal)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">POR MES</div><div class="prestamo-stat-value" style="color:var(--pink)">${fmt(p.mensual)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">COBRO QUINCENAL</div><div class="prestamo-stat-value v-teal">${fmt(p.quincenal)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">COBRO MENSUAL</div><div class="prestamo-stat-value" style="color:var(--pink)">${fmt(p.mensual)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:rgba(232,201,122,0.08);border:1px solid rgba(232,201,122,0.2);border-radius:var(--radius-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">INTERESES COBRADOS</div>
+        <div style="font-size:18px;font-weight:700;color:var(--amber)">${fmt(totalInteresesCobrados)}</div>
+      </div>
+      <div style="background:rgba(63,232,216,0.08);border:1px solid rgba(63,232,216,0.15);border-radius:var(--radius-sm);padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">CAPITAL PENDIENTE</div>
+        <div style="font-size:18px;font-weight:700;color:${pendienteCapital<=0?'var(--green)':'var(--teal)'}">${pendienteCapital<=0?'✅ Pagado':fmt(pendienteCapital)}</div>
+      </div>
     </div>
     <div class="prestamo-progress-wrap">
-      <div class="prestamo-progress-label"><span>Cobrado: ${fmt(totalPagado)}</span><span>Pendiente: ${fmt(pendiente)}</span></div>
+      <div class="prestamo-progress-label"><span>Abonado: ${fmt(totalAbonado)}</span><span>Pendiente: ${fmt(pendienteCapital)}</span></div>
       <div class="prestamo-progress-track"><div class="prestamo-progress-fill" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% cobrado</div>
+      <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% del capital recuperado</div>
     </div>
     ${p.notas?`<div style="font-size:13px;color:var(--text2);background:var(--bg3);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px">📝 ${p.notas}</div>`:''}
-    <div class="section-title">Historial de pagos</div>
-    <div class="resumen-card" style="margin-bottom:12px">${pagosHTML}</div>`;
+    <div class="section-title">Historial de registros</div>
+    <div class="resumen-card" style="margin-bottom:12px">${histHTML}</div>`;
+
   const isLiquidado=p.status==='liquidado';
+  document.getElementById('btn-registrar-interes').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-registrar-pago').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-liquidar-prestamo').style.display=isLiquidado?'none':'block';
+
+  // BUG FIX: cerrar modal antes de confirmar
   document.getElementById('btn-liquidar-prestamo').onclick=()=>{
     closeModal('modal-prestamo-detail');
     setTimeout(()=>{
@@ -676,11 +731,13 @@ window.showPrestamoDetail = async id => {
   document.getElementById('btn-delete-prestamo').onclick=()=>{
     closeModal('modal-prestamo-detail');
     setTimeout(()=>{
-      showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus pagos registrados.','🗑️',async()=>{
-        const ps=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
-        await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
-        await deleteDoc(doc(db,'prestamos',id));
-        showToast('🗑️ Préstamo eliminado');
+      showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus registros.','🗑️',async()=>{
+        try {
+          const ps=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
+          await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
+          await deleteDoc(doc(db,'prestamos',id));
+          showToast('🗑️ Préstamo eliminado');
+        } catch(e){showToast('Error al eliminar');}
       });
     },350);
   };
@@ -701,25 +758,46 @@ window.openEditPrestamo=()=>{
   openModal('modal-prestamo');
 };
 
-window.openRegistrarPago=()=>{
+// ── REGISTRAR INTERÉS ─────────────────────────────────
+window.openRegistrarInteres=()=>{
   document.getElementById('pago-prestamo-id').value=currentPrestamoId;
+  document.getElementById('pago-tipo').value='interes';
   document.getElementById('pago-monto').value='';
   document.getElementById('pago-fecha').value=today();
   document.getElementById('pago-nota').value='';
+  document.getElementById('modal-pago-title').textContent='Registrar interés cobrado';
+  document.getElementById('pago-monto-label').textContent='INTERÉS COBRADO *';
+  // Prellenar con el interés quincenal
+  const p=prestamos.find(x=>x.id===currentPrestamoId);
+  if(p) document.getElementById('pago-monto').value=p.quincenal;
+  closeModal('modal-prestamo-detail');
+  openModal('modal-pago');
+};
+
+// ── REGISTRAR ABONO AL CAPITAL ────────────────────────
+window.openRegistrarPago=()=>{
+  document.getElementById('pago-prestamo-id').value=currentPrestamoId;
+  document.getElementById('pago-tipo').value='abono';
+  document.getElementById('pago-monto').value='';
+  document.getElementById('pago-fecha').value=today();
+  document.getElementById('pago-nota').value='';
+  document.getElementById('modal-pago-title').textContent='Registrar abono al capital';
+  document.getElementById('pago-monto-label').textContent='MONTO ABONADO *';
   closeModal('modal-prestamo-detail');
   openModal('modal-pago');
 };
 
 window.savePago=async()=>{
   const prestamoId=document.getElementById('pago-prestamo-id').value;
+  const tipoRegistro=document.getElementById('pago-tipo').value||'abono';
   const monto=parseFloat(document.getElementById('pago-monto').value);
   const fecha=document.getElementById('pago-fecha').value||today();
   const nota=document.getElementById('pago-nota').value.trim();
-  if(!monto||monto<=0){showToast('Ingresa el monto recibido');return;}
+  if(!monto||monto<=0){showToast('Ingresa el monto');return;}
   try {
-    await addDoc(collection(db,'pagos'),{uid:currentUser.uid,prestamoId,monto,fecha,nota,createdAt:Date.now()});
+    await addDoc(collection(db,'pagos'),{uid:currentUser.uid,prestamoId,monto,fecha,nota,tipoRegistro,createdAt:Date.now()});
     closeModal('modal-pago');
-    showToast('💰 Pago registrado');
+    showToast(tipoRegistro==='interes'?'🔄 Interés registrado':'💵 Abono registrado');
   } catch(e){showToast('Error al guardar');}
 };
 
@@ -749,12 +827,11 @@ function renderPrestamos(){
         <div class="prestamo-grid">
           <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
           <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
-          <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
-          <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
+          <div class="prestamo-stat"><div class="prestamo-stat-label">COBRO QUINCENAL</div><div class="prestamo-stat-value v-teal">${fmt(p.quincenal)}</div></div>
+          <div class="prestamo-stat"><div class="prestamo-stat-label">COBRO MENSUAL</div><div class="prestamo-stat-value" style="color:var(--pink)">${fmt(p.mensual)}</div></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
-          <span>Quincena: <strong style="color:var(--accent)">${fmt(p.quincenal)}</strong></span>
-          <span>Mes: <strong style="color:var(--pink)">${fmt(p.mensual)}</strong></span>
+          <span>Fecha: <strong style="color:var(--text2)">${fmtDate(p.fecha)}</strong></span>
           <span>Año: <strong style="color:var(--amber)">${fmt(p.mensual*12)}</strong></span>
         </div>
       </div>`).join('');
@@ -841,12 +918,10 @@ window.setType=t=>{
 window.setDestino=d=>{currentDestino=d;renderDestinoToggle();};
 window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
-// Preview inputs for prestamo
-document.addEventListener('DOMContentLoaded',()=>{
-  ['p-capital','p-interes'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.addEventListener('input',updatePrestamoPreview);
-  });
+// Preview inputs for prestamo — módulo ya listo al ser type=module
+['p-capital','p-interes'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',updatePrestamoPreview);
 });
 
 renderCatGrid();
