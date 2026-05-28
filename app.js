@@ -71,10 +71,6 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 window.openModal = openModal;
 window.closeModal = closeModal;
 
-document.querySelectorAll('.modal-overlay').forEach(o => {
-  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
-});
-
 // ── AUTH MODE ─────────────────────────────────────────
 window.switchAuthMode = mode => {
   document.getElementById('login-fields').style.display = mode==='login'?'block':'none';
@@ -650,10 +646,6 @@ function calcPrestamo(capital, interes){
   return {total, ganancia, quincenal, mensual, anual};
 }
 
-// Preview on input change
-['p-capital','p-interes'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePrestamoPreview);
-});
 function updatePrestamoPreview(){
   const capital = parseFloat(document.getElementById('p-capital').value);
   const interes = parseFloat(document.getElementById('p-interes').value)||0;
@@ -666,6 +658,18 @@ function updatePrestamoPreview(){
   document.getElementById('prev-quincenal').textContent = fmt(c.quincenal);
   document.getElementById('prev-mensual').textContent = fmt(c.mensual);
 }
+
+// ── FIX: adjuntar listeners de préstamo solo cuando el DOM esté listo ──
+document.addEventListener('DOMContentLoaded', () => {
+  ['p-capital','p-interes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updatePrestamoPreview);
+  });
+
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+  });
+});
 
 window.savePrestamo = async () => {
   const nombre = document.getElementById('p-nombre').value.trim();
