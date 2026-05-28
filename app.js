@@ -14,10 +14,53 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-
-// Sesión persistente — no cierra aunque cierres la app
 setPersistence(auth, browserLocalPersistence);
 
+// ── CATS ──────────────────────────────────────────────
+const CATS = [
+  {id:'comida',    label:'Comida',     emoji:'🍔'},
+  {id:'transporte',label:'Transporte', emoji:'🚌'},
+  {id:'escuela',   label:'Escuela',    emoji:'🎓'},
+  {id:'papeleria', label:'Papelería',  emoji:'📋'},
+  {id:'ropa',      label:'Ropa',       emoji:'👕'},
+  {id:'pareja',    label:'Pareja',     emoji:'💑'},
+  {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
+  {id:'otro',      label:'Otro',       emoji:'📦'},
+];
+const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',ropa:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
+
+// ── STATE ─────────────────────────────────────────────
+let currentUser = null;
+let quincenas = [];
+let movimientos = [];
+let currentQuincenaId = null;
+let currentType = 'gasto';
+let currentDestino = 'ahorro';
+let selectedCat = 'otro';
+let currentTab = 'movimientos';
+let resumenTab = 'general';
+let unsubMovs = null;
+let unsubQs = null;
+let unsubPrestamos = null;
+let prestamos = [];
+let currentPrestamoId = null;
+
+// ── UTILS ─────────────────────────────────────────────
+const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate = s => { const [y,mo,d]=s.split('-'); const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return `${parseInt(d)} ${ms[parseInt(mo)-1]}`; };
+const today = () => new Date().toISOString().split('T')[0];
+const quincenaLabel = q => q ? `${fmtDate(q.inicio)} – ${fmtDate(q.fin)}` : '--';
+const getInitials = n => n ? n.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+
+function showToast(msg, dur=2800) {
+  const t = document.getElementById('toast');
+  t.classList.remove('show');
+  t.textContent = msg;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), dur);
+  }));
+}
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 window.openModal = openModal;
@@ -44,8 +87,6 @@ document.getElementById('reg-pass').addEventListener('input', function() {
   else if(!hasS){h.style.color='var(--amber)';h.textContent='⚠ Agrega al menos 1 especial (!@#$...)';}
   else{h.style.color='var(--green)';h.textContent='✓ Contraseña válida';}
 });
-
-// ── GOOGLE ────────────────────────────────────────────
 
 // ── EMAIL LOGIN ───────────────────────────────────────
 window.loginEmail = async () => {
@@ -101,7 +142,7 @@ window.confirmLogout = () => {
   closeModal('modal-perfil');
   setTimeout(() => {
     showConfirm('¿Cerrar sesión?','Tendrás que volver a iniciar sesión la próxima vez.','↩️',async()=>{
-      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs();
+      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
       await signOut(auth);
     },'btn-danger');
   }, 350);
@@ -166,7 +207,7 @@ function showConfirm(msg, sub, icon, onOk, btnClass='btn-danger'){
 
 // ── FIRESTORE LISTENERS ────────────────────────────────
 function startListeners(){
-  if(unsubQs)unsubQs(); if(unsubMovs)unsubMovs();
+  if(unsubQs)unsubQs(); if(unsubMovs)unsubMovs(); if(unsubPrestamos)unsubPrestamos();
   const uid=currentUser.uid;
   startPrestamosListener();
   unsubQs=onSnapshot(
@@ -195,7 +236,6 @@ window.createQuincena = async () => {
   const fin=document.getElementById('q-fin').value;
   const saldo=parseFloat(document.getElementById('q-saldo').value);
   if(!inicio||!fin||isNaN(saldo)||saldo<0){showToast('Completa todos los campos');return;}
-  // Detectar duplicado
   const dup=quincenas.find(q=>q.inicio===inicio && q.fin===fin);
   if(dup){showToast('⚠️ Ya tienes una quincena con esas fechas');return;}
   try {
@@ -243,16 +283,10 @@ window.confirmDeleteQuincena = id => {
     '🗑️',
     async()=>{
       try {
-        // Delete all movimientos of this quincena
         const snap=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
-        const batch=snap.docs.map(d=>deleteDoc(d.ref));
-        await Promise.all(batch);
+        await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
         await deleteDoc(doc(db,'quincenas',id));
-        if(currentQuincenaId===id){
-          currentQuincenaId=null;
-          if(unsubMovs)unsubMovs();
-          movimientos=[];
-        }
+        if(currentQuincenaId===id){ currentQuincenaId=null; if(unsubMovs)unsubMovs(); movimientos=[]; }
         showToast('🗑️ Quincena eliminada');
       } catch(e){showToast('Error al eliminar');}
     }
@@ -302,7 +336,6 @@ window.showDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
   const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
-  const isDisp=m.type==='ingreso'&&m.destino==='disponible';
   document.getElementById('detail-title').textContent=m.desc||cat.label;
   document.getElementById('detail-content').innerHTML=`
     <div style="text-align:center;padding:12px 0 20px">
@@ -313,10 +346,10 @@ window.showDetail = id => {
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
-    showConfirm('¿Eliminar este movimiento?','','🗑️',async()=>{
+    showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
       await deleteDoc(doc(db,'movimientos',id));
       closeModal('modal-detail');
-      showToast('Movimiento eliminado');
+      showToast('🗑️ Movimiento eliminado');
     });
   };
   openModal('modal-detail');
@@ -412,18 +445,14 @@ function renderResumen(){
       const movs=byCat[c.id].sort((a,b)=>b.fecha.localeCompare(a.fecha));
       const t=movs.reduce((a,m)=>a+m.monto,0);
       const items=movs.map(m=>`<div class="cat-mov-item">
-        <div>
-          <div style="font-size:13px;color:var(--text)">${m.desc||c.label}</div>
-          <div style="font-size:11px;color:var(--text3)">${fmtDate(m.fecha)}</div>
-        </div>
+        <div><div style="font-size:13px;color:var(--text)">${m.desc||c.label}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(m.fecha)}</div></div>
         <div style="font-size:13px;font-weight:600;color:var(--red)">-${fmt(m.monto)}</div>
       </div>`).join('');
       return `<div class="cat-detail-card">
         <div class="cat-detail-header">
           <div class="cat-detail-emoji">${c.emoji}</div>
           <div><div class="cat-detail-name">${c.label}</div><div class="cat-detail-total">${fmt(t)} total · ${movs.length} movimiento${movs.length!==1?'s':''}</div></div>
-        </div>
-        ${items}
+        </div>${items}
       </div>`;
     }).join('');
     content.innerHTML=tabs+(catCards||'<div class="empty-state"><p>Sin gastos registrados</p></div>');
@@ -449,7 +478,6 @@ function renderAhorro(){
       <div style="font-size:13px;font-weight:600;color:var(--green)">+${fmt(m.monto)}</div>
     </div>`).join('')
     :'<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Aún no tienes ahorros registrados 🌱</div>';
-
   content.innerHTML=`
     <div class="ahorro-saved-card">
       <div class="ahorro-saved-label">💰 Total ahorrado esta quincena</div>
@@ -461,7 +489,7 @@ function renderAhorro(){
         <svg width="146" height="146" style="position:absolute;top:-3px;left:-3px;transform:rotate(-90deg)">
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--bg4)" stroke-width="6"/>
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--teal)" stroke-width="6"
-            stroke-dasharray="${dash}" stroke-dashoffset="${dash*0.8}" stroke-linecap="round" id="ring-circle"/>
+            stroke-dasharray="${dash}" stroke-dashoffset="${dash*0.8}" stroke-linecap="round"/>
         </svg>
         <div style="position:relative;text-align:center">
           <div style="font-size:28px;font-weight:600;color:var(--teal)" id="ring-pct">20%</div>
@@ -485,7 +513,6 @@ function renderAhorro(){
     </div>
     <div class="section-title">Historial de ahorro</div>
     <div class="resumen-card">${histHTML}</div>`;
-
   document.getElementById('ahorro-slider').addEventListener('input',function(){
     const pct=parseInt(this.value), amt=Math.round(inicial*pct/100);
     document.getElementById('slider-pct-label').textContent=pct+'%';
@@ -495,15 +522,201 @@ function renderAhorro(){
   });
 }
 
+// ── PRÉSTAMOS ─────────────────────────────────────────
+function startPrestamosListener(){
+  if(unsubPrestamos)unsubPrestamos();
+  const uid=currentUser.uid;
+  unsubPrestamos=onSnapshot(
+    query(collection(db,'prestamos'),where('uid','==',uid),orderBy('createdAt','desc')),
+    snap=>{ prestamos=snap.docs.map(d=>({id:d.id,...d.data()})); if(currentTab==='prestamos')renderPrestamos(); }
+  );
+}
+
+function calcPrestamo(capital, interes){
+  const total=capital*(1+interes/100);
+  return {total, ganancia:total-capital, quincenal:total/2, mensual:total, anual:total*12};
+}
+
+function updatePrestamoPreview(){
+  const capital=parseFloat(document.getElementById('p-capital').value);
+  const interes=parseFloat(document.getElementById('p-interes').value)||0;
+  const preview=document.getElementById('p-preview');
+  if(!capital||capital<=0){preview.style.display='none';return;}
+  preview.style.display='block';
+  const c=calcPrestamo(capital,interes);
+  document.getElementById('prev-total').textContent=fmt(c.total);
+  document.getElementById('prev-ganancia').textContent=fmt(c.ganancia);
+  document.getElementById('prev-quincenal').textContent=fmt(c.quincenal);
+  document.getElementById('prev-mensual').textContent=fmt(c.mensual);
+}
+
+window.savePrestamo = async () => {
+  const nombre=document.getElementById('p-nombre').value.trim();
+  const capital=parseFloat(document.getElementById('p-capital').value);
+  const interes=parseFloat(document.getElementById('p-interes').value)||0;
+  const fecha=document.getElementById('p-fecha').value||today();
+  const notas=document.getElementById('p-notas').value.trim();
+  const editId=document.getElementById('prestamo-edit-id').value;
+  if(!nombre){showToast('Ingresa el nombre del deudor');return;}
+  if(!capital||capital<=0){showToast('Ingresa el capital prestado');return;}
+  const calc=calcPrestamo(capital,interes);
+  const data={uid:currentUser.uid,nombre,capital,interes,fecha,notas,
+    totalACobrar:calc.total,ganancia:calc.ganancia,
+    quincenal:calc.quincenal,mensual:calc.mensual,
+    pagado:0,status:'activo',createdAt:editId?Date.now():Date.now()};
+  try {
+    if(editId){ await updateDoc(doc(db,'prestamos',editId),data); showToast('✅ Préstamo actualizado'); }
+    else { await addDoc(collection(db,'prestamos'),data); showToast('💸 Préstamo registrado'); }
+    closeModal('modal-prestamo');
+    clearPrestamoForm();
+  } catch(e){showToast('Error al guardar');}
+};
+
+function clearPrestamoForm(){
+  ['p-nombre','p-capital','p-interes','p-notas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-fecha').value=today();
+  document.getElementById('p-preview').style.display='none';
+  document.getElementById('prestamo-edit-id').value='';
+  document.getElementById('modal-prestamo-title').textContent='Nuevo préstamo';
+}
+
+window.showPrestamoDetail = async id => {
+  currentPrestamoId=id;
+  const p=prestamos.find(x=>x.id===id); if(!p)return;
+  const pagosSnap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
+  const pagos=pagosSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const totalPagado=pagos.reduce((a,pg)=>a+pg.monto,0);
+  const pendiente=Math.max(0,p.totalACobrar-totalPagado);
+  const pct=p.totalACobrar>0?Math.min(100,Math.round((totalPagado/p.totalACobrar)*100)):0;
+  const pagosHTML=pagos.length>0?pagos.map(pg=>`
+    <div class="pago-item">
+      <div><div style="font-size:13px;color:var(--text)">${pg.nota||'Pago recibido'}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(pg.fecha)}</div></div>
+      <div style="font-size:13px;font-weight:600;color:var(--green)">+${fmt(pg.monto)}</div>
+    </div>`).join('')
+    :'<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin pagos registrados aún</div>';
+  document.getElementById('detail-prestamo-nombre').textContent=p.nombre;
+  document.getElementById('detail-prestamo-content').innerHTML=`
+    <div class="prestamo-grid" style="margin-bottom:12px">
+      <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">POR QUINCENA</div><div class="prestamo-stat-value" style="color:var(--accent)">${fmt(p.quincenal)}</div></div>
+      <div class="prestamo-stat"><div class="prestamo-stat-label">POR MES</div><div class="prestamo-stat-value" style="color:var(--pink)">${fmt(p.mensual)}</div></div>
+    </div>
+    <div class="prestamo-progress-wrap">
+      <div class="prestamo-progress-label"><span>Cobrado: ${fmt(totalPagado)}</span><span>Pendiente: ${fmt(pendiente)}</span></div>
+      <div class="prestamo-progress-track"><div class="prestamo-progress-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% cobrado</div>
+    </div>
+    ${p.notas?`<div style="font-size:13px;color:var(--text2);background:var(--bg3);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px">📝 ${p.notas}</div>`:''}
+    <div class="section-title">Historial de pagos</div>
+    <div class="resumen-card" style="margin-bottom:12px">${pagosHTML}</div>`;
+  const isLiquidado=p.status==='liquidado';
+  document.getElementById('btn-registrar-pago').style.display=isLiquidado?'none':'block';
+  document.getElementById('btn-liquidar-prestamo').style.display=isLiquidado?'none':'block';
+  document.getElementById('btn-liquidar-prestamo').onclick=()=>{
+    showConfirm('¿Marcar como liquidado?','Esto cerrará el préstamo como pagado en su totalidad.','✅',async()=>{
+      await updateDoc(doc(db,'prestamos',id),{status:'liquidado'});
+      closeModal('modal-prestamo-detail');
+      showToast('✅ Préstamo liquidado');
+    },'btn-primary');
+  };
+  document.getElementById('btn-delete-prestamo').onclick=()=>{
+    showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus pagos registrados.','🗑️',async()=>{
+      const ps=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
+      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
+      await deleteDoc(doc(db,'prestamos',id));
+      closeModal('modal-prestamo-detail');
+      showToast('🗑️ Préstamo eliminado');
+    });
+  };
+  openModal('modal-prestamo-detail');
+};
+
+window.openEditPrestamo=()=>{
+  const p=prestamos.find(x=>x.id===currentPrestamoId); if(!p)return;
+  closeModal('modal-prestamo-detail');
+  document.getElementById('prestamo-edit-id').value=p.id;
+  document.getElementById('modal-prestamo-title').textContent='Editar préstamo';
+  document.getElementById('p-nombre').value=p.nombre;
+  document.getElementById('p-capital').value=p.capital;
+  document.getElementById('p-interes').value=p.interes;
+  document.getElementById('p-fecha').value=p.fecha;
+  document.getElementById('p-notas').value=p.notas||'';
+  updatePrestamoPreview();
+  openModal('modal-prestamo');
+};
+
+window.openRegistrarPago=()=>{
+  document.getElementById('pago-prestamo-id').value=currentPrestamoId;
+  document.getElementById('pago-monto').value='';
+  document.getElementById('pago-fecha').value=today();
+  document.getElementById('pago-nota').value='';
+  closeModal('modal-prestamo-detail');
+  openModal('modal-pago');
+};
+
+window.savePago=async()=>{
+  const prestamoId=document.getElementById('pago-prestamo-id').value;
+  const monto=parseFloat(document.getElementById('pago-monto').value);
+  const fecha=document.getElementById('pago-fecha').value||today();
+  const nota=document.getElementById('pago-nota').value.trim();
+  if(!monto||monto<=0){showToast('Ingresa el monto recibido');return;}
+  try {
+    await addDoc(collection(db,'pagos'),{uid:currentUser.uid,prestamoId,monto,fecha,nota,createdAt:Date.now()});
+    closeModal('modal-pago');
+    showToast('💰 Pago registrado');
+  } catch(e){showToast('Error al guardar');}
+};
+
+function renderPrestamos(){
+  const content=document.getElementById('main-content');
+  const activos=prestamos.filter(p=>p.status==='activo');
+  const totalCapital=activos.reduce((a,p)=>a+p.capital,0);
+  const totalGanancia=activos.reduce((a,p)=>a+p.ganancia,0);
+  const totalQuincenal=activos.reduce((a,p)=>a+p.quincenal,0);
+  const summaryHTML=prestamos.length>0?`
+    <div class="prestamos-summary">
+      <div class="prestamos-summary-title">Resumen activos</div>
+      <div class="prestamos-summary-grid">
+        <div class="ps-item"><div class="ps-label">Capital total</div><div class="ps-value v-accent">${fmt(totalCapital)}</div></div>
+        <div class="ps-item"><div class="ps-label">Ganancia total</div><div class="ps-value v-green">${fmt(totalGanancia)}</div></div>
+        <div class="ps-item"><div class="ps-label">Por quincena</div><div class="ps-value v-teal">${fmt(totalQuincenal)}</div></div>
+      </div>
+    </div>`:'';
+  const prestamosHTML=prestamos.length===0
+    ?'<div class="empty-state"><div class="empty-state-icon">🤝</div><p>Sin préstamos registrados.<br>Toca el botón de abajo para agregar uno.</p></div>'
+    :prestamos.map(p=>`
+      <div class="prestamo-card" onclick="showPrestamoDetail('${p.id}')">
+        <div class="prestamo-card-header">
+          <div class="prestamo-nombre">🤝 ${p.nombre}</div>
+          <div class="prestamo-status ${p.status==='liquidado'?'liquidado':'activo'}">${p.status==='liquidado'?'✅ Liquidado':'🟢 Activo'}</div>
+        </div>
+        <div class="prestamo-grid">
+          <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
+          <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
+          <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
+          <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
+          <span>Quincena: <strong style="color:var(--accent)">${fmt(p.quincenal)}</strong></span>
+          <span>Mes: <strong style="color:var(--pink)">${fmt(p.mensual)}</strong></span>
+          <span>Año: <strong style="color:var(--amber)">${fmt(p.mensual*12)}</strong></span>
+        </div>
+      </div>`).join('');
+  content.innerHTML=summaryHTML+prestamosHTML;
+}
+
+// ── MAIN RENDER ───────────────────────────────────────
 function render(){
-  const fabBtn = document.getElementById('fab-btn');
-  if(currentTab==='prestamos') fabBtn.textContent='＋ Nuevo préstamo';
-  else fabBtn.textContent='＋ Agregar movimiento';
+  const fabBtn=document.getElementById('fab-btn');
+  fabBtn.textContent=currentTab==='prestamos'?'＋ Nuevo préstamo':'＋ Agregar movimiento';
   updateHeader();
   if(currentTab==='movimientos')renderMovimientos();
   else if(currentTab==='resumen')renderResumen();
-  else if(currentTab==='prestamos') renderPrestamos();
-  else renderAhorro();
+  else if(currentTab==='ahorro')renderAhorro();
+  else if(currentTab==='prestamos')renderPrestamos();
 }
 
 // ── NAV TABS ──────────────────────────────────────────
@@ -518,11 +731,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 
 // ── FAB ───────────────────────────────────────────────
 document.getElementById('fab-btn').addEventListener('click',()=>{
-  if(currentTab==='prestamos'){
-    clearPrestamoForm();
-    openModal('modal-prestamo');
-    return;
-  }
+  if(currentTab==='prestamos'){ clearPrestamoForm(); openModal('modal-prestamo'); return; }
   const q=getCurrentQ();
   if(!q){renderQuincenaList();openModal('modal-quincena');return;}
   currentType='gasto'; currentDestino='ahorro'; selectedCat='otro';
@@ -569,226 +778,21 @@ function renderCatGrid(){
     </div>`
   ).join('');
 }
-
-window.setType = t => {
+window.setType=t=>{
   currentType=t; renderTypeToggle();
   document.getElementById('destino-wrap').style.display=t==='ingreso'?'block':'none';
   document.getElementById('cat-wrap').style.display=t==='gasto'?'block':'none';
 };
-window.setDestino = d => { currentDestino=d; renderDestinoToggle(); };
-window.selectCat = id => { selectedCat=id; renderCatGrid(); };
+window.setDestino=d=>{currentDestino=d;renderDestinoToggle();};
+window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
-
-// ── PRESTAMOS ─────────────────────────────────────────
-function startPrestamosListener(){
-  if(unsubPrestamos) unsubPrestamos();
-  const uid = currentUser.uid;
-  unsubPrestamos = onSnapshot(
-    query(collection(db,'prestamos'), where('uid','==',uid), orderBy('createdAt','desc')),
-    snap => { prestamos = snap.docs.map(d=>({id:d.id,...d.data()})); if(currentTab==='prestamos') renderPrestamos(); }
-  );
-}
-
-function calcPrestamo(capital, interes){
-  const total = capital * (1 + interes/100);
-  const ganancia = total - capital;
-  const quincenal = total / 2;
-  const mensual = total;
-  const anual = total * 12;
-  return {total, ganancia, quincenal, mensual, anual};
-}
-
-// Preview on input change — wait for DOM
-document.addEventListener('DOMContentLoaded', () => {
-  ['p-capital','p-interes'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('input', updatePrestamoPreview);
+// Preview inputs for prestamo
+document.addEventListener('DOMContentLoaded',()=>{
+  ['p-capital','p-interes'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('input',updatePrestamoPreview);
   });
 });
-function updatePrestamoPreview(){
-  const capital = parseFloat(document.getElementById('p-capital').value);
-  const interes = parseFloat(document.getElementById('p-interes').value)||0;
-  const preview = document.getElementById('p-preview');
-  if(!capital||capital<=0){preview.style.display='none';return;}
-  preview.style.display='block';
-  const c = calcPrestamo(capital, interes);
-  document.getElementById('prev-total').textContent = fmt(c.total);
-  document.getElementById('prev-ganancia').textContent = fmt(c.ganancia);
-  document.getElementById('prev-quincenal').textContent = fmt(c.quincenal);
-  document.getElementById('prev-mensual').textContent = fmt(c.mensual);
-}
-
-window.savePrestamo = async () => {
-  const nombre = document.getElementById('p-nombre').value.trim();
-  const capital = parseFloat(document.getElementById('p-capital').value);
-  const interes = parseFloat(document.getElementById('p-interes').value)||0;
-  const fecha = document.getElementById('p-fecha').value || today();
-  const notas = document.getElementById('p-notas').value.trim();
-  const editId = document.getElementById('prestamo-edit-id').value;
-  if(!nombre){showToast('Ingresa el nombre del deudor');return;}
-  if(!capital||capital<=0){showToast('Ingresa el capital prestado');return;}
-  const calc = calcPrestamo(capital, interes);
-  const data = {uid:currentUser.uid, nombre, capital, interes, fecha, notas,
-    totalACobrar:calc.total, ganancia:calc.ganancia,
-    quincenal:calc.quincenal, mensual:calc.mensual,
-    pagado:0, status:'activo', createdAt:Date.now()};
-  try {
-    if(editId){
-      await updateDoc(doc(db,'prestamos',editId), data);
-      showToast('✅ Préstamo actualizado');
-    } else {
-      await addDoc(collection(db,'prestamos'), data);
-      showToast('💸 Préstamo registrado');
-    }
-    closeModal('modal-prestamo');
-    clearPrestamoForm();
-  } catch(e){showToast('Error al guardar');}
-};
-
-function clearPrestamoForm(){
-  ['p-nombre','p-capital','p-interes','p-notas'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('p-fecha').value = today();
-  document.getElementById('p-preview').style.display='none';
-  document.getElementById('prestamo-edit-id').value='';
-  document.getElementById('modal-prestamo-title').textContent='Nuevo préstamo';
-}
-
-window.showPrestamoDetail = async id => {
-  currentPrestamoId = id;
-  const p = prestamos.find(x=>x.id===id); if(!p) return;
-  // Load pagos
-  const pagosSnap = await getDocs(query(collection(db,'pagos'), where('prestamoId','==',id), orderBy('fecha','desc')));
-  const pagos = pagosSnap.docs.map(d=>({id:d.id,...d.data()}));
-  const totalPagado = pagos.reduce((a,pg)=>a+pg.monto, 0);
-  const pendiente = Math.max(0, p.totalACobrar - totalPagado);
-  const pct = p.totalACobrar > 0 ? Math.min(100, Math.round((totalPagado/p.totalACobrar)*100)) : 0;
-  const pagosHTML = pagos.length > 0 ? pagos.map(pg=>`
-    <div class="pago-item">
-      <div><div style="font-size:13px;color:var(--text)">${pg.nota||'Pago recibido'}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(pg.fecha)}</div></div>
-      <div style="font-size:13px;font-weight:600;color:var(--green)">+${fmt(pg.monto)}</div>
-    </div>`).join('')
-    : '<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin pagos registrados aún</div>';
-  document.getElementById('detail-prestamo-nombre').textContent = p.nombre;
-  document.getElementById('detail-prestamo-content').innerHTML = `
-    <div class="prestamo-grid" style="margin-bottom:12px">
-      <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">POR QUINCENA</div><div class="prestamo-stat-value" style="color:var(--accent)">${fmt(p.quincenal)}</div></div>
-      <div class="prestamo-stat"><div class="prestamo-stat-label">POR MES</div><div class="prestamo-stat-value" style="color:var(--pink)">${fmt(p.mensual)}</div></div>
-    </div>
-    <div class="prestamo-progress-wrap">
-      <div class="prestamo-progress-label"><span>Cobrado: ${fmt(totalPagado)}</span><span>Pendiente: ${fmt(pendiente)}</span></div>
-      <div class="prestamo-progress-track"><div class="prestamo-progress-fill" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% cobrado</div>
-    </div>
-    ${p.notas?`<div style="font-size:13px;color:var(--text2);background:var(--bg3);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px">📝 ${p.notas}</div>`:''}
-    <div class="section-title">Historial de pagos</div>
-    <div class="resumen-card" style="margin-bottom:12px">${pagosHTML}</div>`;
-  const isLiquidado = p.status === 'liquidado';
-  document.getElementById('btn-registrar-pago').style.display = isLiquidado ? 'none' : 'block';
-  document.getElementById('btn-liquidar-prestamo').style.display = isLiquidado ? 'none' : 'block';
-  document.getElementById('btn-liquidar-prestamo').onclick = () => {
-    showConfirm('¿Marcar como liquidado?','Esto cerrará el préstamo como pagado en su totalidad.','✅',async()=>{
-      await updateDoc(doc(db,'prestamos',id),{status:'liquidado'});
-      closeModal('modal-prestamo-detail');
-      showToast('✅ Préstamo liquidado');
-    },'btn-primary');
-  };
-  document.getElementById('btn-delete-prestamo').onclick = () => {
-    showConfirm('¿Eliminar este préstamo?','Se eliminarán también todos sus pagos registrados.','🗑️',async()=>{
-      const ps = await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id)));
-      await Promise.all(ps.docs.map(d=>deleteDoc(d.ref)));
-      await deleteDoc(doc(db,'prestamos',id));
-      closeModal('modal-prestamo-detail');
-      showToast('🗑️ Préstamo eliminado');
-    });
-  };
-  openModal('modal-prestamo-detail');
-};
-
-window.openEditPrestamo = () => {
-  const p = prestamos.find(x=>x.id===currentPrestamoId); if(!p) return;
-  closeModal('modal-prestamo-detail');
-  document.getElementById('prestamo-edit-id').value = p.id;
-  document.getElementById('modal-prestamo-title').textContent = 'Editar préstamo';
-  document.getElementById('p-nombre').value = p.nombre;
-  document.getElementById('p-capital').value = p.capital;
-  document.getElementById('p-interes').value = p.interes;
-  document.getElementById('p-fecha').value = p.fecha;
-  document.getElementById('p-notas').value = p.notas||'';
-  updatePrestamoPreview();
-  openModal('modal-prestamo');
-};
-
-window.openRegistrarPago = () => {
-  document.getElementById('pago-prestamo-id').value = currentPrestamoId;
-  document.getElementById('pago-monto').value = '';
-  document.getElementById('pago-fecha').value = today();
-  document.getElementById('pago-nota').value = '';
-  closeModal('modal-prestamo-detail');
-  openModal('modal-pago');
-};
-
-window.savePago = async () => {
-  const prestamoId = document.getElementById('pago-prestamo-id').value;
-  const monto = parseFloat(document.getElementById('pago-monto').value);
-  const fecha = document.getElementById('pago-fecha').value || today();
-  const nota = document.getElementById('pago-nota').value.trim();
-  if(!monto||monto<=0){showToast('Ingresa el monto recibido');return;}
-  try {
-    await addDoc(collection(db,'pagos'),{uid:currentUser.uid, prestamoId, monto, fecha, nota, createdAt:Date.now()});
-    closeModal('modal-pago');
-    showToast('💰 Pago registrado');
-  } catch(e){showToast('Error al guardar');}
-};
-
-function renderPrestamos(){
-  const content = document.getElementById('main-content');
-  // Summary
-  const activos = prestamos.filter(p=>p.status==='activo');
-  const liquidados = prestamos.filter(p=>p.status==='liquidado');
-  const totalCapital = activos.reduce((a,p)=>a+p.capital,0);
-  const totalGanancia = activos.reduce((a,p)=>a+p.ganancia,0);
-  const totalQuincenal = activos.reduce((a,p)=>a+p.quincenal,0);
-
-  const summaryHTML = prestamos.length > 0 ? `
-    <div class="prestamos-summary">
-      <div class="prestamos-summary-title">Resumen activos</div>
-      <div class="prestamos-summary-grid">
-        <div class="ps-item"><div class="ps-label">Capital total</div><div class="ps-value v-accent">${fmt(totalCapital)}</div></div>
-        <div class="ps-item"><div class="ps-label">Ganancia total</div><div class="ps-value v-green">${fmt(totalGanancia)}</div></div>
-        <div class="ps-item"><div class="ps-label">Por quincena</div><div class="ps-value v-teal">${fmt(totalQuincenal)}</div></div>
-      </div>
-    </div>` : '';
-
-  const prestamosHTML = prestamos.length === 0
-    ? '<div class="empty-state"><div class="empty-state-icon">🤝</div><p>Sin préstamos registrados.<br>Toca el botón de abajo para agregar uno.</p></div>'
-    : prestamos.map(p => {
-        const statusClass = p.status === 'liquidado' ? 'liquidado' : 'activo';
-        const statusLabel = p.status === 'liquidado' ? '✅ Liquidado' : '🟢 Activo';
-        return `<div class="prestamo-card" onclick="showPrestamoDetail('${p.id}')">
-          <div class="prestamo-card-header">
-            <div class="prestamo-nombre">🤝 ${p.nombre}</div>
-            <div class="prestamo-status ${statusClass}">${statusLabel}</div>
-          </div>
-          <div class="prestamo-grid">
-            <div class="prestamo-stat"><div class="prestamo-stat-label">CAPITAL</div><div class="prestamo-stat-value v-accent">${fmt(p.capital)}</div></div>
-            <div class="prestamo-stat"><div class="prestamo-stat-label">INTERÉS</div><div class="prestamo-stat-value v-amber">${p.interes}%</div></div>
-            <div class="prestamo-stat"><div class="prestamo-stat-label">TOTAL A COBRAR</div><div class="prestamo-stat-value v-teal">${fmt(p.totalACobrar)}</div></div>
-            <div class="prestamo-stat"><div class="prestamo-stat-label">GANANCIA</div><div class="prestamo-stat-value v-green">${fmt(p.ganancia)}</div></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
-            <span>Quincena: <strong style="color:var(--accent)">${fmt(p.quincenal)}</strong></span>
-            <span>Mes: <strong style="color:var(--pink)">${fmt(p.mensual)}</strong></span>
-            <span>Año: <strong style="color:var(--amber)">${fmt(p.mensual*12)}</strong></span>
-          </div>
-        </div>`;
-      }).join('');
-
-  content.innerHTML = summaryHTML + prestamosHTML;
-}
 
 renderCatGrid();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
