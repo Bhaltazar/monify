@@ -105,7 +105,6 @@
       <button class="type-btn active-gasto" id="type-gasto" onclick="setType('gasto')">💸 Gasto</button>
       <button class="type-btn" id="type-ingreso" onclick="setType('ingreso')">💰 Extra</button>
     </div>
-    <!-- Destino solo aparece si es ingreso -->
     <div id="destino-wrap" style="display:none;margin-bottom:14px">
       <div class="form-label">¿A DÓNDE VA ESTE EXTRA?</div>
       <div class="destino-toggle">
@@ -122,13 +121,15 @@
   </div>
 </div>
 
-<!-- MODAL DETALLE -->
+<!-- MODAL DETALLE MOVIMIENTO -->
 <div class="modal-overlay" id="modal-detail">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="detail-title">Detalle</div>
     <div id="detail-content"></div>
-    <button class="btn-danger" id="detail-delete-btn">Eliminar</button>
+    <!-- NUEVO: botón editar -->
+    <button class="btn-secondary" id="detail-edit-btn">✏️ Editar movimiento</button>
+    <button class="btn-danger" id="detail-delete-btn">🗑️ Eliminar</button>
     <button class="btn-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
   </div>
 </div>
@@ -200,7 +201,6 @@
   </div>
 </div>
 
-
 <!-- MODAL NUEVO PRÉSTAMO -->
 <div class="modal-overlay" id="modal-prestamo">
   <div class="modal">
@@ -210,7 +210,7 @@
     <div class="form-group"><label class="form-label">NOMBRE DEL DEUDOR *</label><input class="form-input" type="text" id="p-nombre" placeholder="¿A quién le prestas?"></div>
     <div class="form-group"><label class="form-label">CAPITAL PRESTADO *</label><input class="form-input" type="number" inputmode="decimal" id="p-capital" placeholder="$0.00"></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">INTERÉS %</label><input class="form-input" type="number" inputmode="decimal" id="p-interes" placeholder="ej. 10"></div>
+      <div class="form-group"><label class="form-label">INTERÉS % (quincenal)</label><input class="form-input" type="number" inputmode="decimal" id="p-interes" placeholder="ej. 10"></div>
       <div class="form-group"><label class="form-label">FECHA DEL PRÉSTAMO</label><input class="form-input" type="date" id="p-fecha"></div>
     </div>
     <div class="form-group"><label class="form-label">NOTAS (opcional)</label><input class="form-input" type="text" id="p-notas" placeholder="Descripción o acuerdo"></div>
@@ -218,9 +218,9 @@
       <div style="font-size:11px;color:var(--text3);margin-bottom:8px;letter-spacing:0.5px">PROYECCIÓN</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><div style="font-size:10px;color:var(--text3)">Total a cobrar</div><div style="font-size:14px;font-weight:600;color:var(--teal)" id="prev-total">$0</div></div>
-        <div><div style="font-size:10px;color:var(--text3)">Ganancia</div><div style="font-size:14px;font-weight:600;color:var(--green)" id="prev-ganancia">$0</div></div>
-        <div><div style="font-size:10px;color:var(--text3)">Por quincena</div><div style="font-size:14px;font-weight:600;color:var(--accent)" id="prev-quincenal">$0</div></div>
-        <div><div style="font-size:10px;color:var(--text3)">Por mes</div><div style="font-size:14px;font-weight:600;color:var(--amber)" id="prev-mensual">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Ganancia (interés)</div><div style="font-size:14px;font-weight:600;color:var(--green)" id="prev-ganancia">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Cobro quincenal</div><div style="font-size:14px;font-weight:600;color:var(--accent)" id="prev-quincenal">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Cobro mensual</div><div style="font-size:14px;font-weight:600;color:var(--amber)" id="prev-mensual">$0</div></div>
       </div>
     </div>
     <button class="btn-primary" onclick="savePrestamo()">Guardar préstamo</button>
@@ -234,24 +234,27 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="detail-prestamo-nombre">Préstamo</div>
     <div id="detail-prestamo-content"></div>
-    <button class="btn-primary" onclick="openRegistrarPago()" id="btn-registrar-pago">💰 Registrar pago recibido</button>
-    <button class="btn-warn" id="btn-liquidar-prestamo">✅ Marcar como liquidado</button>
+    <!-- NUEVO: dos botones separados para interés y abono -->
+    <button class="btn-warn" onclick="openRegistrarInteres()" id="btn-registrar-interes">🔄 Registrar interés cobrado</button>
+    <button class="btn-primary" onclick="openRegistrarPago()" id="btn-registrar-pago">💵 Registrar abono al capital</button>
+    <button class="btn-liquidar" id="btn-liquidar-prestamo">✅ Marcar como liquidado</button>
     <button class="btn-secondary" onclick="openEditPrestamo()" id="btn-edit-prestamo">✏️ Editar</button>
     <button class="btn-danger" id="btn-delete-prestamo">🗑️ Eliminar</button>
     <button class="btn-secondary" onclick="closeModal('modal-prestamo-detail')" style="margin-top:4px">Cerrar</button>
   </div>
 </div>
 
-<!-- MODAL REGISTRAR PAGO -->
+<!-- MODAL REGISTRAR PAGO / INTERÉS -->
 <div class="modal-overlay" id="modal-pago">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Registrar pago</div>
+    <div class="modal-title" id="modal-pago-title">Registrar pago</div>
     <input type="hidden" id="pago-prestamo-id">
-    <div class="form-group"><label class="form-label">MONTO RECIBIDO *</label><input class="form-input" type="number" inputmode="decimal" id="pago-monto" placeholder="$0.00"></div>
+    <input type="hidden" id="pago-tipo">
+    <div class="form-group"><label class="form-label" id="pago-monto-label">MONTO *</label><input class="form-input" type="number" inputmode="decimal" id="pago-monto" placeholder="$0.00"></div>
     <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="pago-fecha"></div>
-    <div class="form-group"><label class="form-label">NOTA (opcional)</label><input class="form-input" type="text" id="pago-nota" placeholder="ej. Pago quincena 1"></div>
-    <button class="btn-primary" onclick="savePago()">Guardar pago</button>
+    <div class="form-group"><label class="form-label">NOTA (opcional)</label><input class="form-input" type="text" id="pago-nota" placeholder="ej. Quincena 1 mayo"></div>
+    <button class="btn-primary" onclick="savePago()">Guardar</button>
     <button class="btn-danger" onclick="closeModal('modal-pago')">Cancelar</button>
   </div>
 </div>
