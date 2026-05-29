@@ -22,12 +22,12 @@ const CATS = [
   {id:'transporte',label:'Transporte', emoji:'🚌'},
   {id:'escuela',   label:'Escuela',    emoji:'🎓'},
   {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'ropa',      label:'Ropa',       emoji:'👕'},
+  {id:'moto',      label:'Moto',       emoji:'🏍️'},
   {id:'pareja',    label:'Pareja',     emoji:'💑'},
   {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
   {id:'otro',      label:'Otro',       emoji:'📦'},
 ];
-const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',ropa:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
+const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',moto:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
 
 // ── STATE ─────────────────────────────────────────────
 let currentUser = null;
@@ -415,7 +415,9 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-
+  document.getElementById('savings-text').innerHTML=inicial>0
+    ?`💡 Si apartas <strong>${fmt(inicial*0.2)}</strong> (20%) desde el inicio, ahorras sin sentirlo.`
+    :'Crea una quincena para ver tu sugerencia de ahorro.';
 }
 
 function renderMovimientos(){
@@ -465,9 +467,17 @@ function renderResumen(){
     let rows=sorted.map(c=>{
       const t=byCat[c.id].reduce((a,m)=>a+m.monto,0);
       const pct=total>0?Math.round((t/total)*100):0;
+      // Barra de progreso por categoría
       return `<div class="resumen-row">
-        <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
-        <div style="font-size:13px;font-weight:600;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
+        <div style="width:100%">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
+            <div style="font-size:13px;font-weight:600;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
+          </div>
+          <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden">
+            <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pct}%;transition:width 0.4s ease"></div>
+          </div>
+        </div>
       </div>`;
     }).join('');
     if(!rows)rows='<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin gastos registrados</div>';
@@ -498,6 +508,9 @@ function renderResumen(){
             <div style="font-size:18px;font-weight:700;color:${CAT_COLORS[c.id]}">${fmt(t)}</div>
             <div style="font-size:11px;color:var(--text3)">${pctCat}% del total</div>
           </div>
+        </div>
+        <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden;margin-bottom:10px">
+          <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pctCat}%;transition:width 0.4s ease"></div>
         </div>
         ${items}
       </div>`;
@@ -545,6 +558,7 @@ function renderAhorro(){
       </div>
     </div>
     <div class="ahorro-tip">🎯 <strong>Meta sugerida:</strong> apartar <strong>${fmt(sugerido)}</strong> por quincena (20%). En 12 meses tendrías aprox. <strong>${fmt(sugerido*24)}</strong>.</div>
+    <div class="ahorro-tip" style="border-color:rgba(126,207,207,0.2)">💳 <strong>Disponible hoy:</strong> podrías guardar hasta <strong style="color:var(--teal)">${fmt(disponible)}</strong>.</div>
     <div class="section-title">Ajusta tu meta</div>
     <div style="padding:0 2px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:8px">
@@ -911,4 +925,4 @@ window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 });
 
 renderCatGrid();
-if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
