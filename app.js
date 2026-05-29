@@ -21,7 +21,7 @@ const CATS = [
   {id:'transporte',label:'Transporte', emoji:'🚌'},
   {id:'escuela',   label:'Escuela',    emoji:'🎓'},
   {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'moto',      label:'Moto',       emoji:'🏍️'},
+  {id:'moto',       label:'Moto',       emoji:'🏍️'},
   {id:'pareja',    label:'Pareja',     emoji:'💑'},
   {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
   {id:'otro',      label:'Otro',       emoji:'📦'},
@@ -412,6 +412,21 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
+
+  // Segunda barra: progreso de gasto del extra al disponible
+  const extraWrap=document.getElementById('progress-extra-wrap');
+  if(extrasDisp>0){
+    // gastos que superan el saldo inicial se "comen" el extra
+    const gastadoDelExtra=Math.max(0,gastos-inicial+extrasDisp-disponible);
+    const pctExtra=Math.min(100,Math.round((gastadoDelExtra/extrasDisp)*100));
+    document.getElementById('progress-extra-pct').textContent=pctExtra+'%';
+    const fillExtra=document.getElementById('progress-extra-fill');
+    fillExtra.style.width=pctExtra+'%';
+    fillExtra.className='progress-bar-fill'+(pctExtra>75?' danger':'');
+    extraWrap.style.display='block';
+  } else {
+    extraWrap.style.display='none';
+  }
 }
 
 function renderMovimientos(){
