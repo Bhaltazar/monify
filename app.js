@@ -416,7 +416,6 @@ function updateHeader(){
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
 }
-}
 
 function renderMovimientos(){
   const content=document.getElementById('main-content');
