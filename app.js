@@ -21,7 +21,7 @@ const CATS = [
   {id:'transporte',label:'Transporte', emoji:'🚌'},
   {id:'escuela',   label:'Escuela',    emoji:'🎓'},
   {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'moto',       label:'Moto',       emoji:'🏍️'},
+  {id:'moto',      label:'Moto',       emoji:'🏍️'},
   {id:'pareja',    label:'Pareja',     emoji:'💑'},
   {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
   {id:'otro',      label:'Otro',       emoji:'📦'},
@@ -871,9 +871,12 @@ function renderCatGrid(){
 window.setType=t=>{
   currentType=t;renderTypeToggle();
   document.getElementById('destino-wrap').style.display=t==='ingreso'?'block':'none';
-  document.getElementById('cat-wrap').style.display=t==='gasto'?'block':'none';
+  document.getElementById('cat-wrap').style.display=(t==='gasto'||(t==='ingreso'&&currentDestino==='disponible'))?'block':'none';
 };
-window.setDestino=d=>{currentDestino=d;renderDestinoToggle();};
+window.setDestino=d=>{
+  currentDestino=d;renderDestinoToggle();
+  document.getElementById('cat-wrap').style.display=d==='disponible'?'block':'none';
+};
 window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
 ['p-capital','p-interes'].forEach(id=>{
