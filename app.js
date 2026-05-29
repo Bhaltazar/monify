@@ -243,7 +243,7 @@ window.createQuincena = async () => {
     const ref=await addDoc(collection(db,'quincenas'),{uid:currentUser.uid,inicio,fin,saldo,createdAt:Date.now()});
     currentQuincenaId=ref.id;
     closeModal('modal-quincena');
-    showToast('🎉 ¡Quincena creada exitosamente!');
+    showToast('✅ ¡Quincena creada exitosamente!');
   } catch(e){showToast('Error al guardar');}
 };
 
