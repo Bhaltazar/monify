@@ -1,10 +1,11 @@
-const CACHE_NAME = 'monify-v5';
+const CACHE_NAME = 'monify-v4';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   './app.js',
-  './styles.css'
+  './styles.css',
+  './splash.png'
 ];
 
 self.addEventListener('install', event => {
