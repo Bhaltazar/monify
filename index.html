@@ -110,7 +110,7 @@
     <div class="form-group"><label class="form-label">DESCRIPCIÓN (opcional)</label><input class="form-input" type="text" id="input-desc" placeholder="¿De qué fue?"></div>
     <div id="cat-wrap" class="form-group"><label class="form-label">CATEGORÍA</label><div class="cat-grid" id="cat-grid"></div></div>
     <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="input-fecha"></div>
-    <button class="btn-primary" onclick="saveMovimiento()">Guardar</button>
+    <button class="btn-save" onclick="saveMovimiento()">Guardar</button>
     <button class="btn-danger" onclick="closeModal('modal-add')">Cancelar</button>
   </div>
 </div>
@@ -122,7 +122,7 @@
     <div class="modal-title" id="detail-title">Detalle</div>
     <div id="detail-content"></div>
     <!-- NUEVO: botón editar -->
-    <button class="btn-secondary" id="detail-edit-btn">✏️ Editar</button>
+    <button class="btn-warn" id="detail-edit-btn">✏️ Editar</button>
     <button class="btn-danger" id="detail-delete-btn">🗑️ Eliminar</button>
     <button class="btn-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
   </div>
@@ -153,7 +153,7 @@
       <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="q-fin"></div>
     </div>
     <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="q-saldo" placeholder="$0.00"></div>
-    <button class="btn-primary" onclick="createQuincena()">Crear quincena</button>
+    <button class="btn-save" onclick="createQuincena()">Crear quincena</button>
     <button class="btn-secondary" onclick="closeModal('modal-quincena')">Cerrar</button>
   </div>
 </div>
@@ -187,7 +187,7 @@
       <div class="profile-card-title">Editar perfil</div>
       <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="perfil-username-input" placeholder="Tu nombre"></div>
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="perfil-email-input" disabled></div>
-      <button class="btn-primary" onclick="saveProfile()" style="margin-top:12px">Guardar cambios</button>
+      <button class="btn-save" onclick="saveProfile()" style="margin-top:12px">Guardar cambios</button>
       <div class="save-indicator" id="save-indicator">✓ Guardado</div>
     </div>
     <button class="btn-danger" onclick="confirmLogout()">Cerrar sesión</button>
@@ -217,7 +217,7 @@
         <div><div style="font-size:10px;color:var(--text3)">Cobro mensual</div><div style="font-size:14px;font-weight:600;color:var(--amber)" id="prev-mensual">$0</div></div>
       </div>
     </div>
-    <button class="btn-primary" onclick="savePrestamo()">Guardar préstamo</button>
+    <button class="btn-save" onclick="savePrestamo()">Guardar préstamo</button>
     <button class="btn-danger" onclick="closeModal('modal-prestamo')">Cancelar</button>
   </div>
 </div>
@@ -229,10 +229,10 @@
     <div class="modal-title" id="detail-prestamo-nombre">Préstamo</div>
     <div id="detail-prestamo-content"></div>
     <!-- NUEVO: dos botones separados para interés y abono -->
-    <button class="btn-warn" onclick="openRegistrarInteres()" id="btn-registrar-interes">🔄 Registrar interés cobrado</button>
-    <button class="btn-primary" onclick="openRegistrarPago()" id="btn-registrar-pago">💵 Registrar abono al capital</button>
+    <button class="btn-interes" onclick="openRegistrarInteres()" id="btn-registrar-interes">🔄 Registrar interés cobrado</button>
+    <button class="btn-abono" onclick="openRegistrarPago()" id="btn-registrar-pago">💵 Registrar abono al capital</button>
     <button class="btn-liquidar" id="btn-liquidar-prestamo">✅ Marcar como liquidado</button>
-    <button class="btn-secondary" onclick="openEditPrestamo()" id="btn-edit-prestamo">✏️ Editar</button>
+    <button class="btn-warn" onclick="openEditPrestamo()" id="btn-edit-prestamo">✏️ Editar</button>
     <button class="btn-danger" id="btn-delete-prestamo">🗑️ Eliminar</button>
     <button class="btn-secondary" onclick="closeModal('modal-prestamo-detail')" style="margin-top:4px">Cerrar</button>
   </div>
@@ -248,7 +248,7 @@
     <div class="form-group"><label class="form-label" id="pago-monto-label">MONTO *</label><input class="form-input" type="number" inputmode="decimal" id="pago-monto" placeholder="$0.00"></div>
     <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="pago-fecha"></div>
     <div class="form-group"><label class="form-label">NOTA (opcional)</label><input class="form-input" type="text" id="pago-nota" placeholder="ej. Quincena 1 mayo"></div>
-    <button class="btn-primary" onclick="savePago()">Guardar</button>
+    <button class="btn-save" onclick="savePago()">Guardar</button>
     <button class="btn-danger" onclick="closeModal('modal-pago')">Cancelar</button>
   </div>
 </div>
