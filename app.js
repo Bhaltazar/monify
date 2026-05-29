@@ -416,8 +416,7 @@ function updateHeader(){
   // Segunda barra: progreso de gasto del extra al disponible
   const extraWrap=document.getElementById('progress-extra-wrap');
   if(extrasDisp>0){
-    // gastos que superan el saldo inicial se "comen" el extra
-    const gastadoDelExtra=Math.max(0,gastos-inicial+extrasDisp-disponible);
+    const gastadoDelExtra=Math.max(0,extrasDisp-Math.max(0,disponible));
     const pctExtra=Math.min(100,Math.round((gastadoDelExtra/extrasDisp)*100));
     document.getElementById('progress-extra-pct').textContent=pctExtra+'%';
     const fillExtra=document.getElementById('progress-extra-fill');
