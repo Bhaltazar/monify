@@ -415,7 +415,11 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-  const sp=document.getElementById('savings-pill'); if(sp)sp.style.display='none';
+  const sp=document.getElementById('savings-pill');
+  if(sp){
+    if(!q){ sp.style.display='flex'; document.getElementById('savings-text').textContent='Crea una quincena para ver tu sugerencia de ahorro.'; }
+    else { sp.style.display='none'; }
+  }
 }
 
 function renderMovimientos(){
