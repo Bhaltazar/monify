@@ -16,7 +16,6 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 setPersistence(auth, browserLocalPersistence);
 
-// ── CATS ──────────────────────────────────────────────
 const CATS = [
   {id:'comida',    label:'Comida',     emoji:'🍔'},
   {id:'transporte',label:'Transporte', emoji:'🚌'},
@@ -29,7 +28,6 @@ const CATS = [
 ];
 const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',ropa:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
 
-// ── STATE ─────────────────────────────────────────────
 let currentUser = null;
 let quincenas = [];
 let movimientos = [];
@@ -46,10 +44,15 @@ let prestamos = [];
 let currentPrestamoId = null;
 let editingMovId = null;
 
-// ── UTILS ─────────────────────────────────────────────
 const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = s => { const [y,mo,d]=s.split('-'); const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return `${parseInt(d)} ${ms[parseInt(mo)-1]}`; };
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+};
 const quincenaLabel = q => q ? `${fmtDate(q.inicio)} – ${fmtDate(q.fin)}` : '--';
 const getInitials = n => n ? n.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
 
@@ -71,7 +74,7 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
 });
 
-// ── AUTH MODE ─────────────────────────────────────────
+// ── AUTH ──────────────────────────────────────────────
 window.switchAuthMode = mode => {
   document.getElementById('login-fields').style.display = mode==='login'?'block':'none';
   document.getElementById('register-fields').style.display = mode==='register'?'block':'none';
@@ -89,7 +92,6 @@ document.getElementById('reg-pass').addEventListener('input', function() {
   else{h.style.color='var(--green)';h.textContent='✓ Contraseña válida';}
 });
 
-// ── EMAIL LOGIN ───────────────────────────────────────
 window.loginEmail = async () => {
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
@@ -105,7 +107,6 @@ window.loginEmail = async () => {
   } catch(e) { showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión'); }
 };
 
-// ── REGISTER ─────────────────────────────────────────
 window.registerEmail = async () => {
   const username=document.getElementById('reg-username').value.trim();
   const email=document.getElementById('reg-email').value.trim();
@@ -138,7 +139,6 @@ window.resetPass = async () => {
   catch(e){ showToast('Error al enviar correo'); }
 };
 
-// ── CONFIRM LOGOUT ────────────────────────────────────
 window.confirmLogout = () => {
   closeModal('modal-perfil');
   setTimeout(() => {
@@ -149,7 +149,6 @@ window.confirmLogout = () => {
   }, 350);
 };
 
-// ── AUTH STATE ────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
   if(user && user.emailVerified){
@@ -180,7 +179,6 @@ function setUserUI(username, email){
   document.getElementById('perfil-email-input').value=email;
 }
 
-// ── PROFILE ───────────────────────────────────────────
 window.saveProfile = async () => {
   const newName=document.getElementById('perfil-username-input').value.trim();
   if(!newName){showToast('El nombre no puede estar vacío');return;}
@@ -195,7 +193,6 @@ window.saveProfile = async () => {
   } catch(e){showToast('Error al guardar perfil');}
 };
 
-// ── CONFIRM HELPER ────────────────────────────────────
 function showConfirm(msg, sub, icon, onOk, btnClass='btn-danger'){
   document.getElementById('confirm-msg').textContent=msg;
   document.getElementById('confirm-sub').textContent=sub;
@@ -206,13 +203,12 @@ function showConfirm(msg, sub, icon, onOk, btnClass='btn-danger'){
   openModal('modal-confirm');
 }
 
-// ── FIRESTORE LISTENERS ────────────────────────────────
+// ── LISTENERS ─────────────────────────────────────────
 function startListeners(){
   if(unsubQs)unsubQs(); if(unsubMovs)unsubMovs(); if(unsubPrestamos)unsubPrestamos();
-  const uid=currentUser.uid;
   startPrestamosListener();
   unsubQs=onSnapshot(
-    query(collection(db,'quincenas'),where('uid','==',uid),orderBy('inicio','desc')),
+    query(collection(db,'quincenas'),where('uid','==',currentUser.uid),orderBy('inicio','desc')),
     snap=>{
       quincenas=snap.docs.map(d=>({id:d.id,...d.data()}));
       if(!currentQuincenaId && quincenas.length>0) currentQuincenaId=quincenas[0].id;
@@ -225,9 +221,19 @@ function startListeners(){
 function startMovsListener(){
   if(unsubMovs)unsubMovs();
   if(!currentQuincenaId){movimientos=[];render();return;}
+  // Solo orderBy fecha — sin doble orderBy para evitar índice extra
   unsubMovs=onSnapshot(
-    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc'),orderBy('createdAt','desc')),
-    snap=>{movimientos=snap.docs.map(d=>({id:d.id,...d.data()}));render();}
+    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc')),
+    snap=>{
+      // Ordenar por fecha desc, luego createdAt desc dentro del mismo día
+      const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      docs.sort((a,b)=>{
+        if(b.fecha!==a.fecha) return b.fecha.localeCompare(a.fecha);
+        return (b.createdAt||0)-(a.createdAt||0);
+      });
+      movimientos=docs;
+      render();
+    }
   );
 }
 
@@ -237,7 +243,7 @@ window.createQuincena = async () => {
   const fin=document.getElementById('q-fin').value;
   const saldo=parseFloat(document.getElementById('q-saldo').value);
   if(!inicio||!fin||isNaN(saldo)||saldo<0){showToast('Completa todos los campos');return;}
-  const dup=quincenas.find(q=>q.inicio===inicio && q.fin===fin);
+  const dup=quincenas.find(q=>q.inicio===inicio&&q.fin===fin);
   if(dup){showToast('⚠️ Ya tienes una quincena con esas fechas');return;}
   try {
     const ref=await addDoc(collection(db,'quincenas'),{uid:currentUser.uid,inicio,fin,saldo,createdAt:Date.now()});
@@ -270,10 +276,8 @@ window.confirmEditQuincena = () => {
   closeModal('modal-edit-q');
   setTimeout(()=>{
     showConfirm('¿Guardar cambios en esta quincena?','Los saldos se recalcularán con el nuevo monto inicial.','✏️',async()=>{
-      try {
-        await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo});
-        showToast('✅ Quincena actualizada');
-      } catch(e){showToast('Error al actualizar');}
+      try { await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo}); showToast('✅ Quincena actualizada'); }
+      catch(e){showToast('Error al actualizar');}
     },'btn-warn');
   },350);
 };
@@ -291,7 +295,7 @@ window.confirmDeleteQuincena = id => {
           const snap=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
           await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
           await deleteDoc(doc(db,'quincenas',id));
-          if(currentQuincenaId===id){ currentQuincenaId=null; if(unsubMovs)unsubMovs(); movimientos=[]; }
+          if(currentQuincenaId===id){currentQuincenaId=null;if(unsubMovs)unsubMovs();movimientos=[];}
           showToast('🗑️ Quincena eliminada');
         } catch(e){showToast('Error al eliminar');}
       }
@@ -311,8 +315,8 @@ function renderQuincenaList(){
         <div class="quincena-item-sub">Inicio: ${fmt(q.saldo)} · Gastado: ${fmt(gastos)}</div>
       </div>
       <div class="quincena-actions">
-        <button class="q-action-btn" onclick="openEditQuincena('${q.id}')" title="Editar">✏️</button>
-        <button class="q-action-btn" onclick="confirmDeleteQuincena('${q.id}')" title="Eliminar">🗑️</button>
+        <button class="q-action-btn" onclick="openEditQuincena('${q.id}')">✏️</button>
+        <button class="q-action-btn" onclick="confirmDeleteQuincena('${q.id}')">🗑️</button>
       </div>
     </div>`;
   }).join('');
@@ -334,9 +338,8 @@ window.saveMovimiento = async () => {
       showToast('✅ Movimiento actualizado');
     } else {
       await addDoc(collection(db,'movimientos'),{
-        uid:currentUser.uid, quincenaId:currentQuincenaId,
-        monto, desc, fecha, cat:selectedCat,
-        type:currentType, destino, createdAt:Date.now()
+        uid:currentUser.uid,quincenaId:currentQuincenaId,
+        monto,desc,fecha,cat:selectedCat,type:currentType,destino,createdAt:Date.now()
       });
       closeModal('modal-add');
       if(currentType==='gasto') showToast('💸 Gasto registrado');
@@ -359,30 +362,24 @@ window.showDetail = id => {
       ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💰 Fue al disponible'}</div>`:''}
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
-  // BUG FIX: cerrar modal primero, luego confirmar con setTimeout
   document.getElementById('detail-delete-btn').onclick=()=>{
     closeModal('modal-detail');
     setTimeout(()=>{
       showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
-        try {
-          await deleteDoc(doc(db,'movimientos',id));
-          showToast('🗑️ Movimiento eliminado');
-        } catch(e){showToast('Error al eliminar');}
+        try { await deleteDoc(doc(db,'movimientos',id)); showToast('🗑️ Movimiento eliminado'); }
+        catch(e){showToast('Error al eliminar');}
       });
     },350);
   };
-  document.getElementById('detail-edit-btn').onclick=()=>{
-    openEditMovimiento(id);
-  };
+  document.getElementById('detail-edit-btn').onclick=()=>openEditMovimiento(id);
   openModal('modal-detail');
 };
 
-// ── EDIT MOVIMIENTO ───────────────────────────────────
 window.openEditMovimiento = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   editingMovId=id;
   currentType=m.type;
-  currentDestino=m.destino==='gasto'?'ahorro':m.destino;
+  currentDestino=(m.destino==='gasto')?'ahorro':m.destino;
   selectedCat=m.cat||'otro';
   document.getElementById('input-monto').value=m.monto;
   document.getElementById('input-desc').value=m.desc||'';
@@ -497,14 +494,12 @@ function renderResumen(){
             <div style="font-size:18px;font-weight:700;color:${CAT_COLORS[c.id]}">${fmt(t)}</div>
             <div style="font-size:11px;color:var(--text3)">${pctCat}% del total</div>
           </div>
-        </div>
-        ${items}
+        </div>${items}
       </div>`;
     }).join('');
     content.innerHTML=tabs+(catCards||'<div class="empty-state"><p>Sin gastos registrados</p></div>');
   }
 }
-
 window.switchResumenTab = tab => { resumenTab=tab; renderResumen(); };
 
 function renderAhorro(){
@@ -559,7 +554,7 @@ function renderAhorro(){
     <div class="section-title">Historial de ahorro</div>
     <div class="resumen-card">${histHTML}</div>`;
   document.getElementById('ahorro-slider').addEventListener('input',function(){
-    const pct=parseInt(this.value), amt=Math.round(inicial*pct/100);
+    const pct=parseInt(this.value),amt=Math.round(inicial*pct/100);
     document.getElementById('slider-pct-label').textContent=pct+'%';
     document.getElementById('ring-pct').textContent=pct+'%';
     document.getElementById('slider-amount-label').textContent=fmt(amt)+' / quincena';
@@ -570,23 +565,20 @@ function renderAhorro(){
 // ── PRÉSTAMOS ─────────────────────────────────────────
 function startPrestamosListener(){
   if(unsubPrestamos)unsubPrestamos();
-  const uid=currentUser.uid;
   unsubPrestamos=onSnapshot(
-    query(collection(db,'prestamos'),where('uid','==',uid),orderBy('createdAt','desc')),
+    query(collection(db,'prestamos'),where('uid','==',currentUser.uid),orderBy('createdAt','desc')),
     snap=>{ prestamos=snap.docs.map(d=>({id:d.id,...d.data()})); if(currentTab==='prestamos')renderPrestamos(); }
   );
 }
 
-// BUG FIX: calcPrestamo corregido
-// quincenal = solo el interés (lo que cobras cada 15 días)
-// mensual   = quincenal * 2 (dos quincenas)
-// El capital NO se incluye en quincenal/mensual, es aparte
+// ganancia = interés cobrado por quincena
+// quincenal = ganancia (solo el interés, el capital es aparte)
+// mensual = quincenal * 2
+// anual = quincenal * 24
 function calcPrestamo(capital, interes){
-  const ganancia = capital * (interes / 100);   // interés total
-  const quincenal = ganancia;                    // cobras el interés cada quincena
-  const mensual = quincenal * 2;                 // 2 quincenas = 1 mes
-  const anual = quincenal * 24;                  // 24 quincenas = 1 año
-  return { total: capital + ganancia, ganancia, quincenal, mensual, anual };
+  const ganancia=capital*(interes/100);
+  const quincenal=ganancia;
+  return {total:capital+ganancia, ganancia, quincenal, mensual:quincenal*2, anual:quincenal*24};
 }
 
 function updatePrestamoPreview(){
@@ -612,17 +604,12 @@ window.savePrestamo = async () => {
   if(!nombre){showToast('Ingresa el nombre del deudor');return;}
   if(!capital||capital<=0){showToast('Ingresa el capital prestado');return;}
   const calc=calcPrestamo(capital,interes);
-  // BUG FIX: no sobreescribir createdAt al editar
-  const data={
-    uid:currentUser.uid, nombre, capital, interes, fecha, notas,
-    totalACobrar: calc.total, ganancia: calc.ganancia,
-    quincenal: calc.quincenal, mensual: calc.mensual,
-    pagado: 0, status: 'activo',
-    ...(editId ? {} : {createdAt: Date.now()})
-  };
+  const data={uid:currentUser.uid,nombre,capital,interes,fecha,notas,
+    totalACobrar:calc.total,ganancia:calc.ganancia,quincenal:calc.quincenal,mensual:calc.mensual,
+    pagado:0,status:'activo',...(!editId&&{createdAt:Date.now()})};
   try {
-    if(editId){ await updateDoc(doc(db,'prestamos',editId),data); showToast('✅ Préstamo actualizado'); }
-    else { await addDoc(collection(db,'prestamos'),data); showToast('💸 Préstamo registrado'); }
+    if(editId){await updateDoc(doc(db,'prestamos',editId),data);showToast('✅ Préstamo actualizado');}
+    else{await addDoc(collection(db,'prestamos'),data);showToast('💸 Préstamo registrado');}
     closeModal('modal-prestamo');
     clearPrestamoForm();
   } catch(e){showToast('Error al guardar');}
@@ -639,23 +626,17 @@ function clearPrestamoForm(){
 window.showPrestamoDetail = async id => {
   currentPrestamoId=id;
   const p=prestamos.find(x=>x.id===id); if(!p)return;
-
-  // Traer todos los registros (intereses + abonos)
-  const registrosSnap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
-  const registros=registrosSnap.docs.map(d=>({id:d.id,...d.data()}));
-
-  // Separar intereses de abonos al capital
+  let registros=[];
+  try {
+    const snap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
+    registros=snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e){}
   const intereses=registros.filter(r=>r.tipoRegistro==='interes');
   const abonos=registros.filter(r=>r.tipoRegistro!=='interes');
-
-  const totalInteresesCobrados=intereses.reduce((a,r)=>a+r.monto,0);
+  const totalIntereses=intereses.reduce((a,r)=>a+r.monto,0);
   const totalAbonado=abonos.reduce((a,r)=>a+r.monto,0);
-
-  // BUG FIX: pendiente con toFixed para evitar decimales flotantes
-  const pendienteCapital=Math.max(0, parseFloat((p.capital - totalAbonado).toFixed(2)));
+  const pendiente=Math.max(0,parseFloat((p.capital-totalAbonado).toFixed(2)));
   const pct=p.capital>0?Math.min(100,Math.floor((totalAbonado/p.capital)*100)):0;
-
-  // Historial unificado ordenado por fecha
   const histHTML=registros.length>0?registros.map(r=>{
     const esInteres=r.tipoRegistro==='interes';
     return `<div class="pago-item">
@@ -668,8 +649,7 @@ window.showPrestamoDetail = async id => {
       </div>
       <div style="font-size:13px;font-weight:600;color:${esInteres?'var(--amber)':'var(--green)'}">+${fmt(r.monto)}</div>
     </div>`;
-  }).join('')
-  :'<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin registros aún</div>';
+  }).join(''):'<div style="color:var(--text3);font-size:13px;padding:12px 0;text-align:center">Sin registros aún</div>';
 
   document.getElementById('detail-prestamo-nombre').textContent=p.nombre;
   document.getElementById('detail-prestamo-content').innerHTML=`
@@ -682,15 +662,15 @@ window.showPrestamoDetail = async id => {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="background:rgba(232,201,122,0.08);border:1px solid rgba(232,201,122,0.2);border-radius:var(--radius-sm);padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">INTERESES COBRADOS</div>
-        <div style="font-size:18px;font-weight:700;color:var(--amber)">${fmt(totalInteresesCobrados)}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--amber)">${fmt(totalIntereses)}</div>
       </div>
       <div style="background:rgba(63,232,216,0.08);border:1px solid rgba(63,232,216,0.15);border-radius:var(--radius-sm);padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">CAPITAL PENDIENTE</div>
-        <div style="font-size:18px;font-weight:700;color:${pendienteCapital<=0?'var(--green)':'var(--teal)'}">${pendienteCapital<=0?'✅ Pagado':fmt(pendienteCapital)}</div>
+        <div style="font-size:18px;font-weight:700;color:${pendiente<=0?'var(--green)':'var(--teal)'}">${pendiente<=0?'✅ Pagado':fmt(pendiente)}</div>
       </div>
     </div>
     <div class="prestamo-progress-wrap">
-      <div class="prestamo-progress-label"><span>Abonado: ${fmt(totalAbonado)}</span><span>Pendiente: ${fmt(pendienteCapital)}</span></div>
+      <div class="prestamo-progress-label"><span>Abonado: ${fmt(totalAbonado)}</span><span>Pendiente: ${fmt(pendiente)}</span></div>
       <div class="prestamo-progress-track"><div class="prestamo-progress-fill" style="width:${pct}%"></div></div>
       <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">${pct}% del capital recuperado</div>
     </div>
@@ -702,8 +682,6 @@ window.showPrestamoDetail = async id => {
   document.getElementById('btn-registrar-interes').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-registrar-pago').style.display=isLiquidado?'none':'block';
   document.getElementById('btn-liquidar-prestamo').style.display=isLiquidado?'none':'block';
-
-  // BUG FIX: cerrar modal antes de confirmar
   document.getElementById('btn-liquidar-prestamo').onclick=()=>{
     closeModal('modal-prestamo-detail');
     setTimeout(()=>{
@@ -743,23 +721,19 @@ window.openEditPrestamo=()=>{
   openModal('modal-prestamo');
 };
 
-// ── REGISTRAR INTERÉS ─────────────────────────────────
 window.openRegistrarInteres=()=>{
+  const p=prestamos.find(x=>x.id===currentPrestamoId); if(!p)return;
   document.getElementById('pago-prestamo-id').value=currentPrestamoId;
   document.getElementById('pago-tipo').value='interes';
-  document.getElementById('pago-monto').value='';
+  document.getElementById('pago-monto').value=p.quincenal;
   document.getElementById('pago-fecha').value=today();
   document.getElementById('pago-nota').value='';
   document.getElementById('modal-pago-title').textContent='Registrar interés cobrado';
   document.getElementById('pago-monto-label').textContent='INTERÉS COBRADO *';
-  // Prellenar con el interés quincenal
-  const p=prestamos.find(x=>x.id===currentPrestamoId);
-  if(p) document.getElementById('pago-monto').value=p.quincenal;
   closeModal('modal-prestamo-detail');
   openModal('modal-pago');
 };
 
-// ── REGISTRAR ABONO AL CAPITAL ────────────────────────
 window.openRegistrarPago=()=>{
   document.getElementById('pago-prestamo-id').value=currentPrestamoId;
   document.getElementById('pago-tipo').value='abono';
@@ -798,7 +772,7 @@ function renderPrestamos(){
       <div class="prestamos-summary-grid">
         <div class="ps-item"><div class="ps-label">Capital total</div><div class="ps-value v-accent">${fmt(totalCapital)}</div></div>
         <div class="ps-item"><div class="ps-label">Ganancia total</div><div class="ps-value v-green">${fmt(totalGanancia)}</div></div>
-        <div class="ps-item"><div class="ps-label">Por quincena</div><div class="ps-value v-teal">${fmt(totalQuincenal)}</div></div>
+        <div class="ps-item"><div class="ps-label">Cobro quincenal</div><div class="ps-value v-teal">${fmt(totalQuincenal)}</div></div>
       </div>
     </div>`:'';
   const prestamosHTML=prestamos.length===0
@@ -825,8 +799,7 @@ function renderPrestamos(){
 
 // ── MAIN RENDER ───────────────────────────────────────
 function render(){
-  const fabBtn=document.getElementById('fab-btn');
-  fabBtn.textContent=currentTab==='prestamos'?'＋ Nuevo préstamo':'＋ Agregar movimiento';
+  document.getElementById('fab-btn').textContent=currentTab==='prestamos'?'＋ Nuevo préstamo':'＋ Agregar movimiento';
   updateHeader();
   if(currentTab==='movimientos')renderMovimientos();
   else if(currentTab==='resumen')renderResumen();
@@ -846,18 +819,18 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 
 // ── FAB ───────────────────────────────────────────────
 document.getElementById('fab-btn').addEventListener('click',()=>{
-  if(currentTab==='prestamos'){ clearPrestamoForm(); openModal('modal-prestamo'); return; }
+  if(currentTab==='prestamos'){clearPrestamoForm();openModal('modal-prestamo');return;}
   const q=getCurrentQ();
   if(!q){renderQuincenaList();openModal('modal-quincena');return;}
   editingMovId=null;
   document.getElementById('modal-add-title').textContent='Nuevo movimiento';
-  currentType='gasto'; currentDestino='ahorro'; selectedCat='otro';
+  currentType='gasto';currentDestino='ahorro';selectedCat='otro';
   document.getElementById('input-monto').value='';
   document.getElementById('input-desc').value='';
   document.getElementById('input-fecha').value=today();
   document.getElementById('destino-wrap').style.display='none';
   document.getElementById('cat-wrap').style.display='block';
-  renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
+  renderTypeToggle();renderDestinoToggle();renderCatGrid();
   openModal('modal-add');
 });
 
@@ -896,18 +869,17 @@ function renderCatGrid(){
   ).join('');
 }
 window.setType=t=>{
-  currentType=t; renderTypeToggle();
+  currentType=t;renderTypeToggle();
   document.getElementById('destino-wrap').style.display=t==='ingreso'?'block':'none';
   document.getElementById('cat-wrap').style.display=t==='gasto'?'block':'none';
 };
 window.setDestino=d=>{currentDestino=d;renderDestinoToggle();};
 window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
-// Preview inputs for prestamo — módulo ya listo al ser type=module
 ['p-capital','p-interes'].forEach(id=>{
   const el=document.getElementById(id);
-  if(el) el.addEventListener('input',updatePrestamoPreview);
+  if(el)el.addEventListener('input',updatePrestamoPreview);
 });
 
 renderCatGrid();
-if('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
