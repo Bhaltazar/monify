@@ -412,20 +412,6 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-
-  // Segunda barra: progreso de gasto del extra al disponible
-  const extraWrap=document.getElementById('progress-extra-wrap');
-  if(extrasDisp>0){
-    const gastadoDelExtra=Math.max(0,extrasDisp-Math.max(0,disponible));
-    const pctExtra=Math.min(100,Math.round((gastadoDelExtra/extrasDisp)*100));
-    document.getElementById('progress-extra-pct').textContent=pctExtra+'%';
-    const fillExtra=document.getElementById('progress-extra-fill');
-    fillExtra.style.width=pctExtra+'%';
-    fillExtra.className='progress-bar-fill'+(pctExtra>75?' danger':'');
-    extraWrap.style.display='block';
-  } else {
-    extraWrap.style.display='none';
-  }
 }
 
 function renderMovimientos(){
