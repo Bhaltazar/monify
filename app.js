@@ -21,12 +21,12 @@ const CATS = [
   {id:'transporte',label:'Transporte', emoji:'🚌'},
   {id:'escuela',   label:'Escuela',    emoji:'🎓'},
   {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'ropa',      label:'Ropa',       emoji:'👕'},
+  {id:'moto',       label:'Moto',       emoji:'🏍️'},
   {id:'pareja',    label:'Pareja',     emoji:'💑'},
   {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
   {id:'otro',      label:'Otro',       emoji:'📦'},
 ];
-const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',ropa:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
+const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',moto:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
 
 let currentUser = null;
 let quincenas = [];
