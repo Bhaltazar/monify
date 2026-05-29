@@ -465,17 +465,9 @@ function renderResumen(){
     let rows=sorted.map(c=>{
       const t=byCat[c.id].reduce((a,m)=>a+m.monto,0);
       const pct=total>0?Math.round((t/total)*100):0;
-      // Barra de progreso por categoría
       return `<div class="resumen-row">
-        <div style="width:100%">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-            <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
-            <div style="font-size:13px;font-weight:600;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
-          </div>
-          <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden">
-            <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pct}%;transition:width 0.4s ease"></div>
-          </div>
-        </div>
+        <div class="resumen-row-label"><div class="cat-dot" style="background:${CAT_COLORS[c.id]}"></div>${c.emoji} ${c.label}</div>
+        <div style="font-size:13px;font-weight:600;color:${CAT_COLORS[c.id]}">${fmt(t)} <span style="color:var(--text3);font-size:11px">${pct}%</span></div>
       </div>`;
     }).join('');
     if(!rows)rows='<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin gastos registrados</div>';
@@ -506,9 +498,6 @@ function renderResumen(){
             <div style="font-size:18px;font-weight:700;color:${CAT_COLORS[c.id]}">${fmt(t)}</div>
             <div style="font-size:11px;color:var(--text3)">${pctCat}% del total</div>
           </div>
-        </div>
-        <div style="background:var(--bg4);border-radius:4px;height:4px;overflow:hidden;margin-bottom:10px">
-          <div style="height:4px;border-radius:4px;background:${CAT_COLORS[c.id]};width:${pctCat}%;transition:width 0.4s ease"></div>
         </div>
         ${items}
       </div>`;
