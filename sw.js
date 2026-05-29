@@ -1,4 +1,4 @@
-const CACHE_NAME = 'monify-v4';
+const CACHE_NAME = 'monify-v5';
 const urlsToCache = [
   './',
   './index.html',
