@@ -221,11 +221,9 @@ function startListeners(){
 function startMovsListener(){
   if(unsubMovs)unsubMovs();
   if(!currentQuincenaId){movimientos=[];render();return;}
-  // Solo orderBy fecha — sin doble orderBy para evitar índice extra
   unsubMovs=onSnapshot(
     query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc'),limit(200)),
     snap=>{
-      // Ordenar por fecha desc, luego createdAt desc dentro del mismo día
       const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
       docs.sort((a,b)=>{
         if(b.fecha!==a.fecha) return b.fecha.localeCompare(a.fecha);
@@ -292,7 +290,6 @@ window.confirmDeleteQuincena = id => {
       '🗑️',
       async()=>{
         try {
-          // Borrar movimientos de la quincena
           const snapMovs=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
           await Promise.all(snapMovs.docs.map(d=>deleteDoc(d.ref)));
           await deleteDoc(doc(db,'quincenas',id));
@@ -380,15 +377,15 @@ window.openEditMovimiento = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   editingMovId=id;
   currentType=m.type;
-  // Si es gasto, destino='ahorro' es irrelevante (destino-wrap oculto), pero lo dejamos limpio
   currentDestino=(m.type==='ingreso'&&m.destino==='disponible')?'disponible':'ahorro';
   selectedCat=m.cat||'otro';
   document.getElementById('input-monto').value=m.monto;
   document.getElementById('input-desc').value=m.desc||'';
   document.getElementById('input-fecha').value=m.fecha;
   document.getElementById('modal-add-title').textContent='Editar movimiento';
+  // CAMBIO: siempre mostrar categorías para ingresos también
   document.getElementById('destino-wrap').style.display=m.type==='ingreso'?'block':'none';
-  document.getElementById('cat-wrap').style.display=m.type==='gasto'?'block':'none';
+  document.getElementById('cat-wrap').style.display='block';
   renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
   closeModal('modal-detail');
   openModal('modal-add');
@@ -504,67 +501,65 @@ function renderResumen(){
 }
 window.switchResumenTab = tab => { resumenTab=tab; renderResumen(); };
 
+// ── AHORRO (SIMPLIFICADO) ─────────────────────────────
 function renderAhorro(){
-  const q=getCurrentQ();
   const content=document.getElementById('main-content');
-  const inicial=q?q.saldo:0;
-  const gastos=movimientos.filter(m=>m.type==='gasto').reduce((a,m)=>a+m.monto,0);
-  const extrasDisp=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='disponible').reduce((a,m)=>a+m.monto,0);
-  const ahorradoTotal=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').reduce((a,m)=>a+m.monto,0);
-  const disponible=Math.max(0,inicial-gastos+extrasDisp);
-  const sugerido=Math.round(inicial*0.2);
-  const dash=Math.PI*2*68;
-  // Porcentaje real ahorrado vs saldo inicial (máx 100%)
-  const pctAhorrado=inicial>0?Math.min(100,Math.round((ahorradoTotal/inicial)*100)):0;
-  const ahorroMovs=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  const histHTML=ahorroMovs.length>0?ahorroMovs.map(m=>`
-    <div class="ahorro-hist-item">
-      <div><div style="font-size:13px;color:var(--text)">${m.desc||'Ahorro'}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(m.fecha)}</div></div>
-      <div style="font-size:13px;font-weight:600;color:var(--green)">+${fmt(m.monto)}</div>
-    </div>`).join('')
-    :'<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Aún no tienes ahorros registrados 🌱</div>';
+  const ahorroMovs=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').sort((a,b)=>{
+    if(b.fecha!==a.fecha) return b.fecha.localeCompare(a.fecha);
+    return (b.createdAt||0)-(a.createdAt||0);
+  });
+  const ahorradoTotal=ahorroMovs.reduce((a,m)=>a+m.monto,0);
+
+  // Historial con emoji+categoría igual que en movimientos, y botón editar
+  const histHTML=ahorroMovs.length>0
+    ? ahorroMovs.map(m=>{
+        const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+        return `<div class="gasto-item" onclick="showAhorroDetail('${m.id}')">
+          <div class="gasto-icon">${cat.emoji}</div>
+          <div class="gasto-info">
+            <div class="gasto-desc">${m.desc||cat.label}</div>
+            <div class="gasto-cat">${cat.label} · 🌱 Ahorro · ${fmtDate(m.fecha)}</div>
+          </div>
+          <div class="gasto-amount ingreso-ahorro">+${fmt(m.monto)}</div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Aún no tienes ahorros registrados 🌱</div>';
+
   content.innerHTML=`
     <div class="ahorro-saved-card">
       <div class="ahorro-saved-label">💰 Total ahorrado esta quincena</div>
       <div class="ahorro-saved-amount">${fmt(ahorradoTotal)}</div>
       <div class="ahorro-saved-sub">${ahorroMovs.length} depósito${ahorroMovs.length!==1?'s':''} al ahorro</div>
     </div>
-    <div style="text-align:center;padding:10px 0 16px">
-      <div style="width:140px;height:140px;border-radius:50%;border:3px solid var(--bg3);display:flex;align-items:center;justify-content:center;flex-direction:column;margin:0 auto 16px;position:relative;">
-        <svg width="146" height="146" style="position:absolute;top:-3px;left:-3px;transform:rotate(-90deg)">
-          <circle cx="73" cy="73" r="68" fill="none" stroke="var(--bg4)" stroke-width="6"/>
-          <circle cx="73" cy="73" r="68" fill="none" stroke="var(--teal)" stroke-width="6"
-            stroke-dasharray="${dash}" stroke-dashoffset="${dash*(1-pctAhorrado/100)}" stroke-linecap="round"/>
-        </svg>
-        <div style="position:relative;text-align:center">
-          <div style="font-size:28px;font-weight:600;color:var(--teal)" id="ring-pct">${pctAhorrado}%</div>
-          <div style="font-size:11px;color:var(--text3)">ahorrado</div>
-        </div>
-      </div>
-    </div>
-    <div class="ahorro-tip">🎯 <strong>Meta sugerida:</strong> apartar <strong>${fmt(sugerido)}</strong> por quincena (20%). En 12 meses tendrías aprox. <strong>${fmt(sugerido*24)}</strong>.</div>
-    <div class="section-title">Ajusta tu meta</div>
-    <div style="padding:0 2px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:8px">
-        <span>Porcentaje a ahorrar</span>
-        <span id="slider-pct-label" style="color:var(--teal);font-weight:600">20%</span>
-      </div>
-      <input type="range" min="5" max="50" step="5" value="20" id="ahorro-slider">
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
-        <span id="slider-amount-label">${fmt(sugerido)} / quincena</span>
-        <span id="slider-anual-label">${fmt(sugerido*24)} / año</span>
-      </div>
-    </div>
     <div class="section-title">Historial de ahorro</div>
     <div class="resumen-card">${histHTML}</div>`;
-  document.getElementById('ahorro-slider').addEventListener('input',function(){
-    const pct=parseInt(this.value),amt=Math.round(inicial*pct/100);
-    document.getElementById('slider-pct-label').textContent=pct+'%';
-    document.getElementById('ring-pct').textContent=pct+'%';
-    document.getElementById('slider-amount-label').textContent=fmt(amt)+' / quincena';
-    document.getElementById('slider-anual-label').textContent=fmt(amt*24)+' / año';
-  });
 }
+
+// Detalle/editar desde ahorro
+window.showAhorroDetail = id => {
+  const m=movimientos.find(x=>x.id===id); if(!m)return;
+  const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+  document.getElementById('detail-title').textContent=m.desc||cat.label;
+  document.getElementById('detail-content').innerHTML=`
+    <div style="text-align:center;padding:12px 0 20px">
+      <div style="font-size:48px;margin-bottom:8px">${cat.emoji}</div>
+      <div style="font-size:32px;font-weight:600;color:var(--teal)">+${fmt(m.monto)}</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:6px">${cat.label} · ${fmtDate(m.fecha)}</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--teal)">🌱 Fue al ahorro</div>
+      ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
+    </div>`;
+  document.getElementById('detail-delete-btn').onclick=()=>{
+    closeModal('modal-detail');
+    setTimeout(()=>{
+      showConfirm('¿Eliminar este movimiento?','Esta acción no se puede deshacer.','🗑️',async()=>{
+        try { await deleteDoc(doc(db,'movimientos',id)); showToast('🗑️ Movimiento eliminado'); }
+        catch(e){showToast('Error al eliminar');}
+      });
+    },350);
+  };
+  document.getElementById('detail-edit-btn').onclick=()=>openEditMovimiento(id);
+  openModal('modal-detail');
+};
 
 // ── PRÉSTAMOS ─────────────────────────────────────────
 function startPrestamosListener(){
@@ -575,10 +570,6 @@ function startPrestamosListener(){
   );
 }
 
-// ganancia = interés cobrado por quincena
-// quincenal = ganancia (solo el interés, el capital es aparte)
-// mensual = quincenal * 2
-// anual = quincenal * 24
 function calcPrestamo(capital, interes){
   const ganancia=capital*(interes/100);
   const quincenal=ganancia;
@@ -872,14 +863,18 @@ function renderCatGrid(){
     </div>`
   ).join('');
 }
+
+// CAMBIO: al ahorro también muestra categorías; solo se ocultan si… nada, siempre visibles
 window.setType=t=>{
   currentType=t;renderTypeToggle();
   document.getElementById('destino-wrap').style.display=t==='ingreso'?'block':'none';
-  document.getElementById('cat-wrap').style.display=(t==='gasto'||(t==='ingreso'&&currentDestino==='disponible'))?'block':'none';
+  // Categorías SIEMPRE visibles
+  document.getElementById('cat-wrap').style.display='block';
 };
 window.setDestino=d=>{
   currentDestino=d;renderDestinoToggle();
-  document.getElementById('cat-wrap').style.display=d==='disponible'?'block':'none';
+  // Categorías SIEMPRE visibles sin importar destino
+  document.getElementById('cat-wrap').style.display='block';
 };
 window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
