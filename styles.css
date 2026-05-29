@@ -49,12 +49,41 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
 /* BUTTONS */
+/* FAB grande (Agregar movimiento / Nuevo préstamo) — sin tocar */
 .btn-primary{width:100%;background:var(--grad2);color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:4px;transition:opacity 0.2s;}
 .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
-.btn-secondary{width:100%;background:var(--bg4);color:var(--text2);border:none;border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:6px;}
-.btn-danger{width:100%;background:transparent;color:var(--red);border:1px solid rgba(224,133,133,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
-.btn-warn{width:100%;background:rgba(232,201,122,0.1);color:var(--amber);border:1px solid rgba(232,201,122,0.3);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
-.btn-liquidar{width:100%;background:rgba(93,245,160,0.08);color:var(--green);border:1px solid rgba(93,245,160,0.25);border-radius:12px;padding:12px;font-size:14px;font-family:var(--font);cursor:pointer;margin-top:8px;}
+
+/* Guardar — azul claro */
+.btn-save{width:100%;background:rgba(91,143,240,0.15);color:#7eb3f7;border:2px solid #7eb3f7;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-save:active{background:rgba(91,143,240,0.28);}
+
+/* Cerrar — gris azulado */
+.btn-secondary{width:100%;background:rgba(110,125,180,0.12);color:#8d9fd4;border:2px solid #8d9fd4;border-radius:12px;padding:12px;font-size:14px;font-weight:500;font-family:var(--font);cursor:pointer;margin-top:6px;transition:background 0.2s;}
+.btn-secondary:active{background:rgba(110,125,180,0.24);}
+
+/* Eliminar — rojo */
+.btn-danger{width:100%;background:rgba(224,100,100,0.12);color:#f07a7a;border:2px solid #f07a7a;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-danger:active{background:rgba(224,100,100,0.25);}
+
+/* Editar / Guardar cambios — naranja ámbar */
+.btn-warn{width:100%;background:rgba(232,160,80,0.13);color:#f0a855;border:2px solid #f0a855;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-warn:active{background:rgba(232,160,80,0.26);}
+
+/* Marcar como liquidado — púrpura/violeta */
+.btn-liquidar{width:100%;background:rgba(160,100,240,0.13);color:#c084f5;border:2px solid #c084f5;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-liquidar:active{background:rgba(160,100,240,0.26);}
+
+/* Registrar interés — amarillo dorado */
+.btn-interes{width:100%;background:rgba(220,190,60,0.13);color:#e8c84a;border:2px solid #e8c84a;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-interes:active{background:rgba(220,190,60,0.26);}
+
+/* Registrar abono — teal */
+.btn-abono{width:100%;background:rgba(63,232,216,0.12);color:#3fe8d8;border:2px solid #3fe8d8;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-abono:active{background:rgba(63,232,216,0.25);}
+
+/* Aceptar / Confirmar — verde claro */
+.btn-aceptar{width:100%;background:rgba(80,220,130,0.13);color:#5df5a0;border:2px solid #5df5a0;border-radius:12px;padding:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;margin-top:8px;transition:background 0.2s;}
+.btn-aceptar:active{background:rgba(80,220,130,0.26);}
 
 /* VERIFY BANNER */
 .verify-banner{background:rgba(232,201,122,0.1);border:1px solid rgba(232,201,122,0.3);border-radius:var(--radius-sm);padding:14px;margin-top:16px;font-size:13px;color:var(--amber);line-height:1.6;text-align:center;}
