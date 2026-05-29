@@ -243,7 +243,7 @@ window.createQuincena = async () => {
     const ref=await addDoc(collection(db,'quincenas'),{uid:currentUser.uid,inicio,fin,saldo,createdAt:Date.now()});
     currentQuincenaId=ref.id;
     closeModal('modal-quincena');
-    showToast('✅ ¡Quincena creada exitosamente!');
+    showToast('🎉 ¡Quincena creada exitosamente!');
   } catch(e){showToast('Error al guardar');}
 };
 
@@ -415,9 +415,7 @@ function updateHeader(){
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
   fill.className='progress-bar-fill'+(pct>75?' danger':'');
-  document.getElementById('savings-text').innerHTML=inicial>0
-    ?`💡 Si apartas <strong>${fmt(inicial*0.2)}</strong> (20%) desde el inicio, ahorras sin sentirlo.`
-    :'Crea una quincena para ver tu sugerencia de ahorro.';
+}
 }
 
 function renderMovimientos(){
