@@ -276,7 +276,7 @@ window.confirmEditQuincena = () => {
     showConfirm('¿Guardar cambios en esta quincena?','Los saldos se recalcularán con el nuevo monto inicial.','✏️',async()=>{
       try { await updateDoc(doc(db,'quincenas',id),{inicio,fin,saldo}); showToast('✅ Quincena actualizada'); }
       catch(e){showToast('Error al actualizar');}
-    },'btn-warn');
+    },'btn-save');
   },350);
 };
 
@@ -683,7 +683,7 @@ window.showPrestamoDetail = async id => {
       showConfirm('¿Marcar como liquidado?','Esto cerrará el préstamo como pagado en su totalidad.','✅',async()=>{
         await updateDoc(doc(db,'prestamos',id),{status:'liquidado'});
         showToast('✅ Préstamo liquidado');
-      },'btn-primary');
+      },'btn-liquidar');
     },350);
   };
   document.getElementById('btn-delete-prestamo').onclick=()=>{
