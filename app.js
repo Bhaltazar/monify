@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where, orderBy, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where, orderBy, limit, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1LtTOBsbEoeg6OJzb9hCN2HfsxOGTV4I",
@@ -223,7 +223,7 @@ function startMovsListener(){
   if(!currentQuincenaId){movimientos=[];render();return;}
   // Solo orderBy fecha — sin doble orderBy para evitar índice extra
   unsubMovs=onSnapshot(
-    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc')),
+    query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('quincenaId','==',currentQuincenaId),orderBy('fecha','desc'),limit(200)),
     snap=>{
       // Ordenar por fecha desc, luego createdAt desc dentro del mismo día
       const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -292,8 +292,9 @@ window.confirmDeleteQuincena = id => {
       '🗑️',
       async()=>{
         try {
-          const snap=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
-          await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
+          // Borrar movimientos de la quincena
+          const snapMovs=await getDocs(query(collection(db,'movimientos'),where('quincenaId','==',id)));
+          await Promise.all(snapMovs.docs.map(d=>deleteDoc(d.ref)));
           await deleteDoc(doc(db,'quincenas',id));
           if(currentQuincenaId===id){currentQuincenaId=null;if(unsubMovs)unsubMovs();movimientos=[];}
           showToast('🗑️ Quincena eliminada');
@@ -379,7 +380,8 @@ window.openEditMovimiento = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   editingMovId=id;
   currentType=m.type;
-  currentDestino=(m.destino==='gasto')?'ahorro':m.destino;
+  // Si es gasto, destino='ahorro' es irrelevante (destino-wrap oculto), pero lo dejamos limpio
+  currentDestino=(m.type==='ingreso'&&m.destino==='disponible')?'disponible':'ahorro';
   selectedCat=m.cat||'otro';
   document.getElementById('input-monto').value=m.monto;
   document.getElementById('input-desc').value=m.desc||'';
@@ -512,6 +514,8 @@ function renderAhorro(){
   const disponible=Math.max(0,inicial-gastos+extrasDisp);
   const sugerido=Math.round(inicial*0.2);
   const dash=Math.PI*2*68;
+  // Porcentaje real ahorrado vs saldo inicial (máx 100%)
+  const pctAhorrado=inicial>0?Math.min(100,Math.round((ahorradoTotal/inicial)*100)):0;
   const ahorroMovs=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const histHTML=ahorroMovs.length>0?ahorroMovs.map(m=>`
     <div class="ahorro-hist-item">
@@ -530,11 +534,11 @@ function renderAhorro(){
         <svg width="146" height="146" style="position:absolute;top:-3px;left:-3px;transform:rotate(-90deg)">
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--bg4)" stroke-width="6"/>
           <circle cx="73" cy="73" r="68" fill="none" stroke="var(--teal)" stroke-width="6"
-            stroke-dasharray="${dash}" stroke-dashoffset="${dash*0.8}" stroke-linecap="round"/>
+            stroke-dasharray="${dash}" stroke-dashoffset="${dash*(1-pctAhorrado/100)}" stroke-linecap="round"/>
         </svg>
         <div style="position:relative;text-align:center">
-          <div style="font-size:28px;font-weight:600;color:var(--teal)" id="ring-pct">20%</div>
-          <div style="font-size:11px;color:var(--text3)">sugerido</div>
+          <div style="font-size:28px;font-weight:600;color:var(--teal)" id="ring-pct">${pctAhorrado}%</div>
+          <div style="font-size:11px;color:var(--text3)">ahorrado</div>
         </div>
       </div>
     </div>
