@@ -301,20 +301,31 @@ window.confirmDeleteQuincena = id => {
   },350);
 };
 
-function renderQuincenaList(){
+async function renderQuincenaList(){
   const el=document.getElementById('quincena-list');
   if(quincenas.length===0){el.innerHTML='<div style="color:var(--text3);font-size:13px;margin-bottom:16px">Sin quincenas aún.</div>';return;}
+  // Bug 2 fix: traer gastos reales de todas las quincenas desde Firestore
+  el.innerHTML='<div style="color:var(--text3);font-size:13px;margin-bottom:16px;text-align:center">Cargando...</div>';
+  const gastosMap={};
+  try {
+    const snap=await getDocs(query(collection(db,'movimientos'),where('uid','==',currentUser.uid),where('type','==','gasto')));
+    snap.docs.forEach(d=>{
+      const m=d.data();
+      if(!gastosMap[m.quincenaId])gastosMap[m.quincenaId]=0;
+      gastosMap[m.quincenaId]+=m.monto;
+    });
+  } catch(e){}
   el.innerHTML=quincenas.map(q=>{
     const isActive=q.id===currentQuincenaId;
-    const gastos=movimientos.filter(m=>m.quincenaId===q.id&&m.type==='gasto').reduce((a,m)=>a+m.monto,0);
+    const gastos=gastosMap[q.id]||0;
     return `<div class="quincena-item ${isActive?'active-q':''}">
       <div style="flex:1;cursor:pointer" onclick="selectQuincena('${q.id}')">
-        <div class="quincena-item-title">${quincenaLabel(q)} ${isActive?'<span style="color:var(--teal);font-size:12px">✓ activa</span>':''}</div>
+        <div class="quincena-item-title">${quincenaLabel(q)} ${isActive?'<span style="color:var(--teal);font-size:12px">\u2713 activa</span>':''}</div>
         <div class="quincena-item-sub">Inicio: ${fmt(q.saldo)} · Gastado: ${fmt(gastos)}</div>
       </div>
       <div class="quincena-actions">
-        <button class="q-action-btn" onclick="openEditQuincena('${q.id}')">✏️</button>
-        <button class="q-action-btn" onclick="confirmDeleteQuincena('${q.id}')">🗑️</button>
+        <button class="q-action-btn" onclick="openEditQuincena('${q.id}')">&#x270F;&#xFE0F;</button>
+        <button class="q-action-btn" onclick="confirmDeleteQuincena('${q.id}')">&#x1F5D1;&#xFE0F;</button>
       </div>
     </div>`;
   }).join('');
@@ -377,7 +388,9 @@ window.openEditMovimiento = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   editingMovId=id;
   currentType=m.type;
-  currentDestino=(m.type==='ingreso'&&m.destino==='disponible')?'disponible':'ahorro';
+  // Bug 1 fix: si es ingreso respetamos el destino guardado; si es gasto reseteamos a 'ahorro'
+  // para que si el usuario cambia a ingreso, el destino parta limpio en 'ahorro'
+  currentDestino=m.type==='ingreso'?(m.destino==='disponible'?'disponible':'ahorro'):'ahorro';
   selectedCat=m.cat||'otro';
   document.getElementById('input-monto').value=m.monto;
   document.getElementById('input-desc').value=m.desc||'';
@@ -658,6 +671,7 @@ window.showPrestamoDetail = async id => {
       <div style="background:rgba(232,201,122,0.08);border:1px solid rgba(232,201,122,0.2);border-radius:var(--radius-sm);padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">INTERESES COBRADOS</div>
         <div style="font-size:18px;font-weight:700;color:var(--amber)">${fmt(totalIntereses)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">Proyectado: ${fmt(p.ganancia)} / quincena</div>
       </div>
       <div style="background:rgba(63,232,216,0.08);border:1px solid rgba(63,232,216,0.15);border-radius:var(--radius-sm);padding:12px;text-align:center">
         <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px">CAPITAL PENDIENTE</div>
@@ -750,6 +764,17 @@ window.savePago=async()=>{
   if(!monto||monto<=0){showToast('Ingresa el monto');return;}
   try {
     await addDoc(collection(db,'pagos'),{uid:currentUser.uid,prestamoId,monto,fecha,nota,tipoRegistro,createdAt:Date.now()});
+    // Bug 3 fix: actualizar acumulado en el préstamo para mostrarlo en el listado sin re-consultar pagos
+    const p=prestamos.find(x=>x.id===prestamoId);
+    if(p){
+      if(tipoRegistro==='interes'){
+        const nuevoTotal=(p.totalInteresesCobrados||0)+monto;
+        await updateDoc(doc(db,'prestamos',prestamoId),{totalInteresesCobrados:nuevoTotal});
+      } else {
+        const nuevoAbonado=(p.totalAbonado||0)+monto;
+        await updateDoc(doc(db,'prestamos',prestamoId),{totalAbonado:nuevoAbonado});
+      }
+    }
     closeModal('modal-pago');
     showToast(tipoRegistro==='interes'?'🔄 Interés registrado':'💵 Abono registrado');
   } catch(e){showToast('Error al guardar');}
@@ -786,7 +811,7 @@ function renderPrestamos(){
         </div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3)">
           <span>Fecha: <strong style="color:var(--text2)">${fmtDate(p.fecha)}</strong></span>
-          <span>Año: <strong style="color:var(--amber)">${fmt(p.mensual*12)}</strong></span>
+          <span>Cobrado: <strong style="color:var(--amber)">${fmt(p.totalInteresesCobrados||0)}</strong></span>
         </div>
       </div>`).join('');
   content.innerHTML=summaryHTML+prestamosHTML;
@@ -813,10 +838,10 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 });
 
 // ── FAB ───────────────────────────────────────────────
-document.getElementById('fab-btn').addEventListener('click',()=>{
+document.getElementById('fab-btn').addEventListener('click',async()=>{
   if(currentTab==='prestamos'){clearPrestamoForm();openModal('modal-prestamo');return;}
   const q=getCurrentQ();
-  if(!q){renderQuincenaList();openModal('modal-quincena');return;}
+  if(!q){await renderQuincenaList();openModal('modal-quincena');return;}
   editingMovId=null;
   document.getElementById('modal-add-title').textContent='Nuevo movimiento';
   currentType='gasto';currentDestino='ahorro';selectedCat='otro';
@@ -829,8 +854,8 @@ document.getElementById('fab-btn').addEventListener('click',()=>{
   openModal('modal-add');
 });
 
-document.getElementById('quincena-badge-btn').addEventListener('click',()=>{
-  renderQuincenaList();
+document.getElementById('quincena-badge-btn').addEventListener('click',async()=>{
+  await renderQuincenaList();
   const d=new Date(),day=d.getDate();
   let inicio,fin;
   if(day<=15){
