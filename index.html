@@ -23,9 +23,11 @@
 #modal-settings .modal{position:relative;overflow:hidden;}
 .settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
 .settings-subpanel.open{transform:translateX(0);}
-.settings-subpanel-header{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.settings-back-btn{background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;}
+.settings-subpanel-header{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.settings-back-btn{background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;display:flex;align-items:center;gap:2px;}
+.back-label{font-size:11px;font-weight:500;}
 .settings-subpanel-title{font-size:15px;font-weight:700;color:var(--text);}
+.settings-subpanel-section-title{font-size:17px;font-weight:700;color:var(--text);text-align:center;padding:14px 16px 0;}
 .settings-subpanel-body{padding:16px;overflow-y:auto;flex:1;}
 </style>
 </head>
@@ -455,9 +457,9 @@
   <!-- Panel secundario: Categorías -->
   <div class="settings-subpanel" id="settings-subpanel-cats">
     <div class="settings-subpanel-header">
-      <button class="settings-back-btn" onclick="closeSettingsCats()">‹</button>
-      <div class="settings-subpanel-title">🗃️ Categorías</div>
+      <button class="settings-back-btn" onclick="closeSettingsCats()">‹ <span class="back-label">Volver</span></button>
     </div>
+    <div class="settings-subpanel-section-title">Categorías</div>
     <div class="settings-subpanel-body">
       <div style="margin-bottom:12px;">
         <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Vista previa</div>
@@ -482,9 +484,9 @@
   <!-- Panel secundario: Secciones -->
   <div class="settings-subpanel" id="settings-subpanel-sections">
     <div class="settings-subpanel-header">
-      <button class="settings-back-btn" onclick="closeSettingsSections()">‹</button>
-      <div class="settings-subpanel-title">📌 Secciones</div>
+      <button class="settings-back-btn" onclick="closeSettingsSections()">‹ <span class="back-label">Volver</span></button>
     </div>
+    <div class="settings-subpanel-section-title">Secciones</div>
     <div class="settings-subpanel-body">
       <div class="setup-section-sub" style="margin-bottom:16px;">Personaliza las secciones del menú</div>
       <div class="setup-switch-row">
