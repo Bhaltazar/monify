@@ -164,6 +164,22 @@ window.confirmLogout = () => {
 
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
+  if(!user && window._switchingToEmail){
+    // Venimos de un cambio de cuenta: pre-rellenar email y ocultar overlay suavemente
+    const overlay=document.getElementById('setup-saving-overlay');
+    const splashMsg=document.getElementById('splash-msg');
+    if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
+    const emailToFill=window._switchingToEmail;
+    window._switchingToEmail=null;
+    await new Promise(r=>setTimeout(r,600));
+    overlay.style.display='none';
+    const authEmail=document.getElementById('auth-email');
+    if(authEmail) authEmail.value=emailToFill;
+    document.getElementById('app-main').style.display='none';
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('auth-screen').style.display='flex';
+    return;
+  }
   if(user && user.emailVerified){
     currentUser=user;
     const snap=await getDoc(doc(db,'users',user.uid));
@@ -1224,18 +1240,23 @@ window.saveEditCat=()=>{
   // Duplicate emoji check (excluding self)
   const dupEmoji=setupCats.find((c,idx)=>idx!==i&&c.emoji===emoji);
   if(dupEmoji){showToast(`⚠️ El emoji ${emoji} ya lo usa "${dupEmoji.label}"`);return;}
-  // In-use check: if name changed and cat has movimientos
-  const catId=setupCats[i].id;
-  const inUse=movimientos.some(m=>m.cat===catId);
-  if(inUse && setupCats[i].label!==name){
-    // Allow emoji edit but warn about name
-  }
   setupCats[i]={...setupCats[i],emoji,label:name};
+  const origin=document.getElementById('modal-edit-cat').dataset.origin||'setup';
   closeModal('modal-edit-cat');
   renderSetupCatList();
   renderSetupPreview();
   renderSettingsCatList();
   renderSettingsCatPreview();
+  if(origin==='settings'){
+    // Persistir inmediatamente en Firestore y actualizar CATS en memoria
+    const cats=setupCats.map((c,idx)=>({...c,color:c.color||CAT_COLOR_POOL[idx%CAT_COLOR_POOL.length]}));
+    userConfig={...userConfig,cats};
+    setDoc(doc(db,'userConfig',currentUser.uid),userConfig).catch(()=>showToast('Error al guardar'));
+    applyUserConfig();
+    render();
+    showToast('✅ Categoría actualizada');
+    setTimeout(()=>openModal('modal-settings'),200);
+  }
 };
 
 window.saveSetup=async()=>{
@@ -1363,7 +1384,9 @@ window.openEditSettingsCat=i=>{
   document.getElementById('edit-cat-idx').value=i;
   document.getElementById('edit-cat-emoji').value=setupCats[i].emoji;
   document.getElementById('edit-cat-name').value=setupCats[i].label;
-  openModal('modal-edit-cat');
+  document.getElementById('modal-edit-cat').dataset.origin='settings';
+  closeModal('modal-settings');
+  setTimeout(()=>openModal('modal-edit-cat'),200);
 };
 
 window.tryDeleteSettingsCat=i=>{
@@ -1443,9 +1466,10 @@ window.switchToAccount=async(uid,email)=>{
   overlay.style.display='flex';
   if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
   await new Promise(r=>setTimeout(r,1200));
+  // Marcamos la cuenta destino para que onAuthStateChanged muestre el login sin ocultar el overlay
+  window._switchingToEmail=email;
   await signOut(auth);
-  overlay.style.display='none';
-  if(splashMsg) splashMsg.textContent='Personalizando tu perfil...';
+  // El overlay se oculta desde onAuthStateChanged tras mostrar la pantalla de login
 };
 
 window.startAddAccount=()=>{
