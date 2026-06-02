@@ -16,6 +16,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;}
+#setup-screen{overflow-y:auto !important;}
 #app-main{max-width:430px;margin:0 auto;position:relative;}
 
 /* LOADER */
