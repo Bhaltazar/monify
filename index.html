@@ -49,6 +49,112 @@
   </div>
 </div>
 
+<!-- SETUP SCREEN (primera vez / nueva cuenta) -->
+<div id="setup-screen" style="display:none;flex-direction:column;min-height:100dvh;background:var(--bg);overflow-y:auto;">
+  <!-- Splash de carga al guardar -->
+  <div id="setup-saving-overlay" style="display:none;position:fixed;inset:0;z-index:999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <img src="splash.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <div class="loader-spinner"></div>
+      <div style="font-size:14px;color:var(--text3)">Personalizando tu perfil...</div>
+    </div>
+  </div>
+
+  <div style="padding:52px 24px 40px;max-width:430px;margin:0 auto;width:100%;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <img src="icon-192.png" style="width:56px;height:56px;border-radius:18px;margin-bottom:12px" onerror="this.style.display='none'">
+      <div style="font-family:var(--font-serif);font-size:28px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">¡Bienvenido!</div>
+      <div style="font-size:13px;color:var(--text3);line-height:1.6;">Personaliza MoniFy a tu gusto.<br>Podrás cambiarlo después.</div>
+    </div>
+
+    <!-- PASO 1: Categorías -->
+    <div class="setup-section">
+      <div class="setup-section-title">📂 Tus categorías</div>
+      <div class="setup-section-sub">Mín. 3, máx. 7 · "Otro" siempre al final</div>
+
+      <!-- Vista previa como se verá en el modal -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Así se verán</div>
+        <div class="cat-grid" id="setup-cat-preview"></div>
+      </div>
+
+      <!-- Lista editable con drag & drop -->
+      <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Ordenar y editar</div>
+      <div id="setup-cat-list" class="setup-cat-list"></div>
+
+      <!-- Agregar nueva categoría -->
+      <div id="setup-add-cat-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <input class="form-input setup-emoji-input" type="text" id="new-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+          <input class="form-input" type="text" id="new-cat-name" placeholder="Nombre de categoría" maxlength="18" style="flex:1;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-save" style="margin-top:0;flex:1;" onclick="addSetupCat()">Agregar</button>
+          <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="cancelAddCat()">Cancelar</button>
+        </div>
+      </div>
+
+      <button class="btn-secondary" id="setup-add-cat-btn" style="margin-top:10px;" onclick="showAddCatForm()">＋ Nueva categoría</button>
+    </div>
+
+    <!-- PASO 2: Secciones opcionales -->
+    <div class="setup-section">
+      <div class="setup-section-title">⚙️ Secciones</div>
+      <div class="setup-section-sub">Activa las que quieras usar</div>
+
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🌱 Ahorro</div>
+          <div class="setup-switch-sub">Guarda dinero aparte de tus gastos</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setup-switch-ahorro">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🤝 Préstamos</div>
+          <div class="setup-switch-sub">Registra y controla lo que prestas</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setup-switch-prestamos">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="saveSetup()" style="margin-top:8px;">Guardar y entrar →</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CATEGORÍA (setup) -->
+<div class="modal-overlay centered" id="modal-edit-cat">
+  <div class="modal">
+    <div class="modal-title">Editar categoría</div>
+    <input type="hidden" id="edit-cat-idx">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+      <input class="form-input setup-emoji-input" type="text" id="edit-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+      <input class="form-input" type="text" id="edit-cat-name" placeholder="Nombre" maxlength="18" style="flex:1;" id="edit-cat-name">
+    </div>
+    <button class="btn-save" style="margin-top:0;" onclick="saveEditCat()">Guardar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-cat')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL MULTI-CUENTA (cambiar cuenta) -->
+<div class="modal-overlay" id="modal-accounts">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cuentas</div>
+    <div id="accounts-list"></div>
+    <button class="btn-save" id="add-account-btn" onclick="startAddAccount()">＋ Agregar cuenta</button>
+    <button class="btn-secondary" onclick="closeModal('modal-accounts')">Cerrar</button>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="app-main" style="display:none;flex-direction:column;height:100dvh;">
   <div class="header">
@@ -190,7 +296,11 @@
       <button class="btn-save" onclick="saveProfile()" style="margin-top:12px">Guardar cambios</button>
       <div class="save-indicator" id="save-indicator">✓ Guardado</div>
     </div>
-    <button class="btn-danger" onclick="confirmLogout()">Cerrar sesión</button>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn-warn" onclick="openAccountsModal()" style="flex:1;margin-top:0;">👤 Cuentas</button>
+      <button class="btn-secondary" onclick="openSettings()" style="flex:1;margin-top:0;">⚙️ Config.</button>
+    </div>
+    <button class="btn-danger" onclick="confirmLogout()" style="margin-top:8px;">Cerrar sesión</button>
     <button class="btn-secondary" onclick="closeModal('modal-perfil')">Cancelar</button>
   </div>
 </div>
