@@ -314,7 +314,7 @@ async function renderQuincenaList(){
       if(!gastosMap[m.quincenaId])gastosMap[m.quincenaId]=0;
       gastosMap[m.quincenaId]+=m.monto;
     });
-  } catch(e){}
+  } catch(e){ showToast('⚠️ Error al cargar los registros'); }
   el.innerHTML=quincenas.map(q=>{
     const isActive=q.id===currentQuincenaId;
     const gastos=gastosMap[q.id]||0;
@@ -419,7 +419,7 @@ function updateHeader(){
   document.getElementById('saldo-actual-display').textContent=fmt(disponible);
   document.getElementById('total-gastado-display').textContent=fmt(gastos);
   document.getElementById('total-ahorrado-display').textContent=fmt(ahorrado);
-  const pct=inicial>0?Math.min(100,Math.round((gastos/inicial)*100)):0;
+  const pct=(inicial+extrasDisp)>0?Math.min(100,Math.round((gastos/(inicial+extrasDisp))*100)):0;
   document.getElementById('progress-pct').textContent=pct+'%';
   const fill=document.getElementById('progress-fill');
   fill.style.width=pct+'%';
@@ -614,7 +614,7 @@ window.savePrestamo = async () => {
   const calc=calcPrestamo(capital,interes);
   const data={uid:currentUser.uid,nombre,capital,interes,fecha,notas,
     totalACobrar:calc.total,ganancia:calc.ganancia,quincenal:calc.quincenal,mensual:calc.mensual,
-    pagado:0,status:'activo',...(!editId&&{createdAt:Date.now()})};
+    ...(!editId&&{pagado:0,status:'activo',createdAt:Date.now()})};
   try {
     if(editId){await updateDoc(doc(db,'prestamos',editId),data);showToast('✅ Préstamo actualizado');}
     else{await addDoc(collection(db,'prestamos'),data);showToast('💸 Préstamo registrado');}
@@ -638,7 +638,7 @@ window.showPrestamoDetail = async id => {
   try {
     const snap=await getDocs(query(collection(db,'pagos'),where('prestamoId','==',id),orderBy('fecha','desc')));
     registros=snap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e){}
+  } catch(e){ showToast('⚠️ Error al cargar los registros'); }
   const intereses=registros.filter(r=>r.tipoRegistro==='interes');
   const abonos=registros.filter(r=>r.tipoRegistro!=='interes');
   const totalIntereses=intereses.reduce((a,r)=>a+r.monto,0);
