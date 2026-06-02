@@ -109,6 +109,7 @@ window.loginEmail = async () => {
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showToast('Completa correo y contraseña');return;}
+  const isSwitching = window._switchingToEmail && window._switchingToEmail===email;
   try {
     const cred = await signInWithEmailAndPassword(auth,email,pass);
     if(!cred.user.emailVerified){
@@ -116,8 +117,23 @@ window.loginEmail = async () => {
       const b=document.getElementById('verify-banner');
       b.style.display='block';
       b.textContent='📧 Aún no verificas tu correo. Revisa tu bandeja de entrada.';
+      return;
     }
-  } catch(e) { showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión'); }
+    if(isSwitching){
+      // Mostrar splash de cambio de cuenta
+      window._switchingToEmail=null;
+      const authEmail=document.getElementById('auth-email');
+      if(authEmail) authEmail.readOnly=false;
+      const overlay=document.getElementById('setup-saving-overlay');
+      const splashMsg=document.getElementById('splash-msg');
+      if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
+      overlay.style.display='flex';
+      await new Promise(r=>setTimeout(r,1500));
+      overlay.style.display='none';
+    }
+  } catch(e) {
+    showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión');
+  }
 };
 
 window.registerEmail = async () => {
@@ -165,16 +181,15 @@ window.confirmLogout = () => {
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
   if(!user && window._switchingToEmail){
-    // Venimos de un cambio de cuenta: pre-rellenar email y ocultar overlay suavemente
-    const overlay=document.getElementById('setup-saving-overlay');
-    const splashMsg=document.getElementById('splash-msg');
-    if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
+    // Venimos de un cambio de cuenta: mostrar login con email prellenado y bloqueado
     const emailToFill=window._switchingToEmail;
-    window._switchingToEmail=null;
-    await new Promise(r=>setTimeout(r,600));
-    overlay.style.display='none';
+    // NO limpiamos _switchingToEmail aún; lo usará loginEmail para el splash
     const authEmail=document.getElementById('auth-email');
-    if(authEmail) authEmail.value=emailToFill;
+    if(authEmail){ authEmail.value=emailToFill; authEmail.readOnly=true; }
+    const authPass=document.getElementById('auth-pass');
+    if(authPass){ authPass.value=''; }
+    // Mostrar solo el tab de login
+    switchAuthMode('login');
     document.getElementById('app-main').style.display='none';
     document.getElementById('setup-screen').style.display='none';
     document.getElementById('auth-screen').style.display='flex';
@@ -1460,16 +1475,11 @@ function renderAccountsList(){
 
 window.switchToAccount=async(uid,email)=>{
   closeModal('modal-accounts');
-  const overlay=document.getElementById('setup-saving-overlay');
-  const splashMsg=document.getElementById('splash-msg');
-  if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
-  overlay.style.display='flex';
-  if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
-  await new Promise(r=>setTimeout(r,1200));
-  // Marcamos la cuenta destino para que onAuthStateChanged muestre el login sin ocultar el overlay
+  // Guardamos el email destino: loginEmail lo usará para mostrar el splash al autenticar
   window._switchingToEmail=email;
+  if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
   await signOut(auth);
-  // El overlay se oculta desde onAuthStateChanged tras mostrar la pantalla de login
+  // onAuthStateChanged mostrará el form con el email prellenado
 };
 
 window.startAddAccount=()=>{
