@@ -1334,6 +1334,9 @@ window.saveSetup=async()=>{
 // ── SETTINGS (volver a config desde perfil) ────────────
 window.openSettings=()=>{
   closeModal('modal-perfil');
+  // Cerrar subpanel por si quedó abierto
+  const panel=document.getElementById('settings-subpanel-sections');
+  if(panel) panel.classList.remove('open');
   // Cargar config actual en el modal de settings
   if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
   else setupCats=[...DEFAULT_CATS];
@@ -1430,11 +1433,28 @@ window.tryDeleteSettingsCat=i=>{
   const catId=setupCats[i].id;
   const inUse=movimientos.some(m=>m.cat===catId);
   if(inUse){showToast('⚠️ Esta categoría está en uso, no puedes eliminarla');return;}
-  showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
-    setupCats.splice(i,1);
-    renderSettingsCatList();
-    renderSettingsCatPreview();
-  });
+  // Cerrar settings primero para que el confirm no quede detrás
+  closeModal('modal-settings');
+  setTimeout(()=>{
+    showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
+      setupCats.splice(i,1);
+      renderSettingsCatList();
+      renderSettingsCatPreview();
+      showToast('🗑️ Categoría eliminada');
+      // Reabrir settings después de la acción
+      setTimeout(()=>openModal('modal-settings'),200);
+    });
+  },350);
+};
+
+// ── Subpanel Secciones (deslizable) ──
+window.openSettingsSections=()=>{
+  const panel=document.getElementById('settings-subpanel-sections');
+  if(panel) panel.classList.add('open');
+};
+window.closeSettingsSections=()=>{
+  const panel=document.getElementById('settings-subpanel-sections');
+  if(panel) panel.classList.remove('open');
 };
 
 // Also hook the drag-drop callbacks to refresh settings preview
