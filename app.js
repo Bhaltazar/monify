@@ -137,8 +137,17 @@ window.loginEmail = async () => {
   if(!email||!pass){showToast('Completa correo y contraseña');return;}
   const isSwitching = window._switchingToEmail && window._switchingToEmail===email;
   try {
+    // Mostrar splash ANTES del login si es cambio de cuenta
+    if(isSwitching){
+      const overlay=document.getElementById('setup-saving-overlay');
+      const splashMsg=document.getElementById('splash-msg');
+      if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
+      overlay.style.display='flex';
+    }
     const cred = await signInWithEmailAndPassword(auth,email,pass);
     if(!cred.user.emailVerified){
+      // Ocultar splash si había aparecido
+      document.getElementById('setup-saving-overlay').style.display='none';
       await signOut(auth);
       const b=document.getElementById('verify-banner');
       b.style.display='block';
@@ -146,18 +155,15 @@ window.loginEmail = async () => {
       return;
     }
     if(isSwitching){
-      // Mostrar splash de cambio de cuenta
       window._switchingToEmail=null;
       const authEmail=document.getElementById('auth-email');
       if(authEmail) authEmail.readOnly=false;
-      const overlay=document.getElementById('setup-saving-overlay');
-      const splashMsg=document.getElementById('splash-msg');
-      if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
-      overlay.style.display='flex';
+      // Mantener splash visible mínimo 1.5s para que se lea
       await new Promise(r=>setTimeout(r,1500));
-      overlay.style.display='none';
+      document.getElementById('setup-saving-overlay').style.display='none';
     }
   } catch(e) {
+    document.getElementById('setup-saving-overlay').style.display='none';
     showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión');
   }
 };
@@ -1341,6 +1347,8 @@ window.saveSetup=async()=>{
   if(!qInicio||!qFin||isNaN(qSaldo)||qSaldo<0){showToast('Completa los datos de tu quincena');return;}
   // Mostrar overlay de carga
   const overlay=document.getElementById('setup-saving-overlay');
+  const splashMsg=document.getElementById('splash-msg');
+  if(splashMsg) splashMsg.textContent='Personalizando tu perfil...';
   overlay.style.display='flex';
   try {
     const cats=setupCats.map((c,i)=>({...c,color:c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length]}));
