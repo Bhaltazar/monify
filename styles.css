@@ -469,3 +469,81 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   padding: 2px 8px;
   flex-shrink: 0;
 }
+
+/* ── SETUP STEPPER ─────────────────────────────────── */
+.setup-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  gap: 0;
+}
+.setup-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.setup-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg4);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text3);
+  transition: all 0.3s;
+}
+.setup-step-label {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.3px;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.setup-step-item.active .setup-step-circle {
+  background: var(--grad2);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 0 12px rgba(63,232,216,0.35);
+}
+.setup-step-item.active .setup-step-label { color: var(--teal); font-weight: 600; }
+.setup-step-item.done .setup-step-circle {
+  background: rgba(63,232,216,0.15);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.setup-step-item.done .setup-step-label { color: var(--teal); }
+.setup-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 8px;
+  margin-bottom: 18px;
+  min-width: 28px;
+  transition: background 0.3s;
+}
+.setup-step-line.done { background: var(--teal); }
+
+/* ── TUTORIAL ──────────────────────────────────────── */
+#tutorial-overlay { z-index: 200; }
+#tutorial-canvas { display: block; }
+#tutorial-tooltip {
+  min-width: 220px;
+  animation: tooltip-in 0.25s ease;
+}
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Botón deshabilitado de destino ahorro */
+.destino-btn.disabled-section {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: all;
+}
