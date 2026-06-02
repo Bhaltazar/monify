@@ -245,6 +245,10 @@ function startListeners(){
       if(!currentQuincenaId && quincenas.length>0) currentQuincenaId=quincenas[0].id;
       startMovsListener();
       render();
+      // Launch tutorial if flagged (only first time)
+      if(localStorage.getItem('monify_show_tutorial')==='1'){
+        setTimeout(startTutorial, 800);
+      }
     }
   );
 }
@@ -981,9 +985,59 @@ function applyUserConfig(){
 }
 
 // ── SETUP SCREEN ───────────────────────────────────────
+
+// ── SETUP STEPS ───────────────────────────────────────
+let setupCurrentStep = 1;
+
+window.setupGoStep = step => {
+  if(step > setupCurrentStep && setupCurrentStep === 1){
+    if(setupCats.length < 3){ showToast("Necesitas al menos 3 categorías"); return; }
+  }
+  setupCurrentStep = step;
+  [1,2,3].forEach(s => {
+    const el = document.getElementById("setup-step-"+s);
+    if(el) el.style.display = s === step ? "block" : "none";
+  });
+  document.querySelectorAll(".setup-step-item").forEach(item => {
+    const s = parseInt(item.dataset.step);
+    item.classList.remove("active","done");
+    if(s === step) item.classList.add("active");
+    else if(s < step) item.classList.add("done");
+  });
+  document.querySelectorAll(".setup-step-line").forEach((line, i) => {
+    line.classList.toggle("done", i + 1 < step);
+  });
+  if(step === 3){
+    const d = new Date(), day = d.getDate();
+    let ini, fin;
+    if(day <= 15){
+      ini = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01";
+      fin = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-15";
+    } else {
+      const last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+      ini = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-16";
+      fin = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+last;
+    }
+    if(!document.getElementById("setup-q-inicio").value) document.getElementById("setup-q-inicio").value = ini;
+    if(!document.getElementById("setup-q-fin").value) document.getElementById("setup-q-fin").value = fin;
+  }
+  document.getElementById("setup-screen").scrollTo({top:0, behavior:"smooth"});
+};
+
 function showSetupScreen(){
   setupCats=[...DEFAULT_CATS];
+  setupCurrentStep=1;
   document.getElementById('setup-screen').style.display='flex';
+  // Show only step 1
+  [1,2,3].forEach(s=>{
+    const el=document.getElementById('setup-step-'+s);
+    if(el) el.style.display=s===1?'block':'none';
+  });
+  document.querySelectorAll('.setup-step-item').forEach(item=>{
+    item.classList.remove('active','done');
+    if(parseInt(item.dataset.step)===1) item.classList.add('active');
+  });
+  document.querySelectorAll('.setup-step-line').forEach(l=>l.classList.remove('done'));
   renderSetupCatList();
   renderSetupPreview();
 }
@@ -1147,6 +1201,11 @@ window.saveEditCat=()=>{
 
 window.saveSetup=async()=>{
   if(setupCats.length<3){showToast('Necesitas al menos 3 categorías');return;}
+  // Validar quincena del paso 3
+  const qInicio=document.getElementById('setup-q-inicio').value;
+  const qFin=document.getElementById('setup-q-fin').value;
+  const qSaldo=parseFloat(document.getElementById('setup-q-saldo').value);
+  if(!qInicio||!qFin||isNaN(qSaldo)||qSaldo<0){showToast('Completa los datos de tu quincena');return;}
   // Mostrar overlay de carga
   const overlay=document.getElementById('setup-saving-overlay');
   overlay.style.display='flex';
@@ -1159,12 +1218,17 @@ window.saveSetup=async()=>{
     userConfig={cats,sections};
     await setDoc(doc(db,'userConfig',currentUser.uid),userConfig);
     applyUserConfig();
+    // Crear primera quincena
+    const ref=await addDoc(collection(db,'quincenas'),{uid:currentUser.uid,inicio:qInicio,fin:qFin,saldo:qSaldo,createdAt:Date.now()});
+    currentQuincenaId=ref.id;
     await new Promise(r=>setTimeout(r,1800));
     overlay.style.display='none';
     document.getElementById('setup-screen').style.display='none';
     const am=document.getElementById('app-main');
     am.style.display='flex'; am.style.flexDirection='column';
     startListeners();
+    // Marcar tutorial para mostrar
+    localStorage.setItem('monify_show_tutorial','1');
   } catch(e){
     overlay.style.display='none';
     showToast('Error al guardar configuración');
@@ -1277,3 +1341,176 @@ document.getElementById('setup-switch-prestamos').addEventListener('change',e=>{
 
 renderCatGrid();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ── TUTORIAL ──────────────────────────────────────────
+const TUTORIAL_STEPS = [
+  {
+    selector: '.balance-card',
+    text: '💰 Aquí ves tu resumen financiero: saldo inicial, lo disponible, cuánto has gastado y cuánto has ahorrado en esta quincena.',
+    position: 'bottom'
+  },
+  {
+    selector: '.quincena-badge',
+    text: '📅 Aquí aparece tu quincena activa. Tócala para cambiar de quincena, crear una nueva o editar la actual.',
+    position: 'bottom'
+  },
+  {
+    selector: '.nav-tabs',
+    text: '🗂️ Estas pestañas te llevan a tus movimientos, resumen por categoría, ahorro y préstamos.',
+    position: 'bottom'
+  },
+  {
+    selector: '.fab',
+    text: '➕ Este botón es para agregar un movimiento (gasto o ingreso extra). ¡Úsalo cada vez que gastes algo!',
+    position: 'top'
+  },
+  {
+    selector: '.avatar-btn',
+    text: '👤 Tu perfil: cambia tu nombre, gestiona cuentas o ajusta la configuración de secciones.',
+    position: 'bottom'
+  }
+];
+
+let tutorialStep = 0;
+let tutorialActive = false;
+let tutorialAnimFrame = null;
+
+function startTutorial(){
+  tutorialStep = 0;
+  tutorialActive = true;
+  document.getElementById('tutorial-overlay').style.display = 'block';
+  renderTutorialStep();
+}
+
+function renderTutorialStep(){
+  if(tutorialStep >= TUTORIAL_STEPS.length){ endTutorial(); return; }
+  const step = TUTORIAL_STEPS[tutorialStep];
+  const target = document.querySelector(step.selector);
+  const badge = document.getElementById('tutorial-step-badge');
+  const text = document.getElementById('tutorial-text');
+  const nextBtn = document.getElementById('tutorial-next-btn');
+
+  badge.textContent = `Paso ${tutorialStep+1} de ${TUTORIAL_STEPS.length}`;
+  text.textContent = step.text;
+  nextBtn.textContent = tutorialStep === TUTORIAL_STEPS.length - 1 ? '¡Listo! ✓' : 'Siguiente →';
+
+  drawTutorialCanvas(target);
+  positionTutorialTooltip(target, step.position);
+}
+
+function drawTutorialCanvas(target){
+  const canvas = document.getElementById('tutorial-canvas');
+  const overlay = document.getElementById('tutorial-overlay');
+  canvas.width = overlay.offsetWidth;
+  canvas.height = overlay.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if(target){
+    const r = target.getBoundingClientRect();
+    const pad = 8;
+    const x = r.left - pad, y = r.top - pad;
+    const w = r.width + pad*2, h = r.height + pad*2;
+    const radius = 12;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.moveTo(x+radius, y);
+    ctx.lineTo(x+w-radius, y);
+    ctx.arcTo(x+w,y, x+w,y+radius, radius);
+    ctx.lineTo(x+w, y+h-radius);
+    ctx.arcTo(x+w,y+h, x+w-radius,y+h, radius);
+    ctx.lineTo(x+radius, y+h);
+    ctx.arcTo(x,y+h, x,y+h-radius, radius);
+    ctx.lineTo(x, y+radius);
+    ctx.arcTo(x,y, x+radius,y, radius);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function positionTutorialTooltip(target, position){
+  const tooltip = document.getElementById('tutorial-tooltip');
+  const overlay = document.getElementById('tutorial-overlay');
+  const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
+  const tw = tooltip.offsetWidth || 280;
+  const th = tooltip.offsetHeight || 120;
+  let top, left;
+
+  if(target){
+    const r = target.getBoundingClientRect();
+    left = Math.min(Math.max(r.left, 16), ow - tw - 16);
+    if(position === 'bottom'){
+      top = r.bottom + 16;
+      if(top + th > oh - 16) top = r.top - th - 16;
+    } else {
+      top = r.top - th - 16;
+      if(top < 16) top = r.bottom + 16;
+    }
+  } else {
+    left = (ow - tw) / 2;
+    top = (oh - th) / 2;
+  }
+
+  tooltip.style.top = top + 'px';
+  tooltip.style.left = left + 'px';
+}
+
+function endTutorial(){
+  tutorialActive = false;
+  document.getElementById('tutorial-overlay').style.display = 'none';
+  localStorage.removeItem('monify_show_tutorial');
+}
+
+document.getElementById('tutorial-next-btn').addEventListener('click', ()=>{
+  tutorialStep++;
+  renderTutorialStep();
+});
+document.getElementById('tutorial-skip-btn').addEventListener('click', endTutorial);
+
+// Redraw on resize
+window.addEventListener('resize', ()=>{ if(tutorialActive) renderTutorialStep(); });
+
+// ── AHORRO BUTTON DISABLE LOGIC ────────────────────────
+function updateAhorroBtn(){
+  const ahorroEnabled = userConfig?.sections?.ahorro !== false;
+  const btnAhorro = document.getElementById('dest-ahorro');
+  if(!btnAhorro) return;
+  if(ahorroEnabled){
+    btnAhorro.classList.remove('disabled-section');
+    btnAhorro.title = '';
+  } else {
+    btnAhorro.classList.add('disabled-section');
+    btnAhorro.title = 'Activa la sección Ahorro en Configuración para usarla';
+    // if currently set to ahorro, switch to disponible
+    if(currentDestino === 'ahorro'){
+      currentDestino = 'disponible';
+      renderDestinoToggle();
+    }
+  }
+}
+
+// Override setDestino to check if ahorro is enabled
+const _origSetDestino = window.setDestino;
+window.setDestino = d => {
+  if(d === 'ahorro' && userConfig?.sections?.ahorro === false){
+    showToast('🌱 Activa la sección Ahorro en ⚙️ Config. para usarla');
+    return;
+  }
+  _origSetDestino(d);
+  updateAhorroBtn();
+};
+
+// Hook into openModal for modal-add to refresh button state
+const _origOpenModal = window.openModal;
+window.openModal = id => {
+  _origOpenModal(id);
+  if(id === 'modal-add') setTimeout(updateAhorroBtn, 50);
+};
+
+// Hook into FAB click to also check after renderDestinoToggle
+const fabBtn = document.getElementById('fab-btn');
+fabBtn.addEventListener('click', ()=>{ setTimeout(updateAhorroBtn, 60); }, true);
