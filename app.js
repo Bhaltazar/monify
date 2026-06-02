@@ -410,7 +410,7 @@ window.saveMovimiento = async () => {
 
 window.showDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
-  const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+  const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
   const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
   document.getElementById('detail-title').textContent=m.desc||cat.label;
   document.getElementById('detail-content').innerHTML=`
@@ -487,7 +487,7 @@ function renderMovimientos(){
   Object.keys(byDay).sort((a,b)=>b.localeCompare(a)).forEach(fecha=>{
     html+=`<div class="day-group"><div class="day-label">${fecha===today()?'🟢 Hoy · ':''}${fmtDate(fecha)}</div>`;
     byDay[fecha].forEach(m=>{
-      const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+      const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
       const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
       const isDisp=m.type==='ingreso'&&m.destino==='disponible';
       const amtClass=m.type==='gasto'?'':isAhorro?'ingreso-ahorro':'ingreso-disp';
@@ -576,7 +576,7 @@ function renderAhorro(){
   // Historial con emoji+categoría igual que en movimientos, y botón editar
   const histHTML=ahorroMovs.length>0
     ? ahorroMovs.map(m=>{
-        const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+        const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
         return `<div class="gasto-item" onclick="showAhorroDetail('${m.id}')">
           <div class="gasto-icon">${cat.emoji}</div>
           <div class="gasto-info">
@@ -601,7 +601,7 @@ function renderAhorro(){
 // Detalle/editar desde ahorro
 window.showAhorroDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
-  const cat=CATS.find(c=>c.id===m.cat)||CATS[7];
+  const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
   document.getElementById('detail-title').textContent=m.desc||cat.label;
   document.getElementById('detail-content').innerHTML=`
     <div style="text-align:center;padding:12px 0 20px">
@@ -1181,6 +1181,11 @@ window.addSetupCat=()=>{
   if(!emoji){showToast('Pon un emoji');return;}
   if(!name){showToast('Pon un nombre');return;}
   if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
+  if(/^[a-zA-Z0-9]/.test(emoji)){showToast('⚠️ Pon un emoji, no letras');return;}
+  const dupName=setupCats.find(c=>c.label.toLowerCase()===name.toLowerCase());
+  if(dupName){showToast(`⚠️ Ya tienes una categoría llamada "${name}"`);return;}
+  const dupEmoji=setupCats.find(c=>c.emoji===emoji);
+  if(dupEmoji){showToast(`⚠️ El emoji ${emoji} ya lo usa "${dupEmoji.label}"`);return;}
   const id='cat_'+Date.now();
   setupCats.push({id,label:name,emoji,color:CAT_COLOR_POOL[setupCats.length%CAT_COLOR_POOL.length]});
   cancelAddCat();
@@ -1190,6 +1195,9 @@ window.addSetupCat=()=>{
 
 window.tryDeleteSetupCat=i=>{
   if(setupCats.length<=3){showToast('Mínimo 3 categorías');return;}
+  const catId=setupCats[i].id;
+  const inUse=movimientos.some(m=>m.cat===catId);
+  if(inUse){showToast('⚠️ Esta categoría está en uso, no puedes eliminarla');return;}
   showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
     setupCats.splice(i,1);
     renderSetupCatList();
@@ -1208,10 +1216,26 @@ window.saveEditCat=()=>{
   const emoji=document.getElementById('edit-cat-emoji').value.trim();
   const name=document.getElementById('edit-cat-name').value.trim();
   if(!emoji||!name){showToast('Emoji y nombre son obligatorios');return;}
+  // Validate emoji (must be emoji character, not letters)
+  if(/^[a-zA-Z0-9]/.test(emoji)){showToast('⚠️ Pon un emoji, no letras');return;}
+  // Duplicate name check (excluding self)
+  const dupName=setupCats.find((c,idx)=>idx!==i&&c.label.toLowerCase()===name.toLowerCase());
+  if(dupName){showToast(`⚠️ Ya tienes una categoría llamada "${name}"`);return;}
+  // Duplicate emoji check (excluding self)
+  const dupEmoji=setupCats.find((c,idx)=>idx!==i&&c.emoji===emoji);
+  if(dupEmoji){showToast(`⚠️ El emoji ${emoji} ya lo usa "${dupEmoji.label}"`);return;}
+  // In-use check: if name changed and cat has movimientos
+  const catId=setupCats[i].id;
+  const inUse=movimientos.some(m=>m.cat===catId);
+  if(inUse && setupCats[i].label!==name){
+    // Allow emoji edit but warn about name
+  }
   setupCats[i]={...setupCats[i],emoji,label:name};
   closeModal('modal-edit-cat');
   renderSetupCatList();
   renderSetupPreview();
+  renderSettingsCatList();
+  renderSettingsCatPreview();
 };
 
 window.saveSetup=async()=>{
@@ -1243,7 +1267,7 @@ window.saveSetup=async()=>{
     am.style.display='flex'; am.style.flexDirection='column';
     startListeners();
     // Marcar tutorial para mostrar
-    localStorage.setItem('monify_show_tutorial','1');
+    if(!localStorage.getItem('monify_tutorial_done')) localStorage.setItem('monify_show_tutorial','1');
   } catch(e){
     overlay.style.display='none';
     showToast('Error al guardar configuración');
@@ -1253,16 +1277,113 @@ window.saveSetup=async()=>{
 // ── SETTINGS (volver a config desde perfil) ────────────
 window.openSettings=()=>{
   closeModal('modal-perfil');
-  // Iniciar setupCats con la config actual
+  // Cargar config actual en el modal de settings
   if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
   else setupCats=[...DEFAULT_CATS];
-  document.getElementById('setup-switch-ahorro').checked=userConfig?.sections?.ahorro||false;
-  document.getElementById('setup-switch-prestamos').checked=userConfig?.sections?.prestamos||false;
-  document.getElementById('app-main').style.display='none';
-  const ss=document.getElementById('setup-screen');
-  ss.style.display='flex';
-  renderSetupCatList();
-  renderSetupPreview();
+  document.getElementById('settings-switch-ahorro').checked=userConfig?.sections?.ahorro||false;
+  document.getElementById('settings-switch-prestamos').checked=userConfig?.sections?.prestamos||false;
+  renderSettingsCatList();
+  renderSettingsCatPreview();
+  openModal('modal-settings');
+};
+
+window.saveSettings=async()=>{
+  if(setupCats.length<3){showToast('Necesitas al menos 3 categorías');return;}
+  const overlay=document.getElementById('setup-saving-overlay');
+  const splashMsg=document.getElementById('splash-msg');
+  if(splashMsg) splashMsg.textContent='Guardando configuración...';
+  overlay.style.display='flex';
+  try {
+    const cats=setupCats.map((c,i)=>({...c,color:c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length]}));
+    const ahorroChecked=document.getElementById('settings-switch-ahorro').checked;
+    const prestamosChecked=document.getElementById('settings-switch-prestamos').checked;
+    // Detect if sections were just enabled (for tutorial)
+    const ahorroJustEnabled = ahorroChecked && userConfig?.sections?.ahorro===false;
+    const prestamosJustEnabled = prestamosChecked && userConfig?.sections?.prestamos===false;
+    const sections={ahorro:ahorroChecked,prestamos:prestamosChecked};
+    userConfig={cats,sections};
+    await setDoc(doc(db,'userConfig',currentUser.uid),userConfig);
+    applyUserConfig();
+    await new Promise(r=>setTimeout(r,900));
+    overlay.style.display='none';
+    closeModal('modal-settings');
+    render();
+    showToast('✅ Configuración guardada');
+    // Tutorial para secciones recién activadas
+    if(ahorroJustEnabled && !localStorage.getItem('monify_tutorial_ahorro')){
+      currentTab='ahorro'; render();
+      setTimeout(()=>startSectionTutorial('ahorro'), 500);
+    } else if(prestamosJustEnabled && !localStorage.getItem('monify_tutorial_prestamos')){
+      currentTab='prestamos'; render();
+      setTimeout(()=>startSectionTutorial('prestamos'), 500);
+    }
+  } catch(e){
+    overlay.style.display='none';
+    showToast('Error al guardar');
+  }
+};
+
+function renderSettingsCatList(){
+  const list=document.getElementById('settings-cat-list');
+  if(!list) return;
+  list.innerHTML=setupCats.map((c,i)=>`
+    <div class="setup-cat-item" draggable="true" data-idx="${i}"
+         ondragstart="onDragStart(event,${i})"
+         ondragover="onDragOver(event,${i})"
+         ondragend="onDragEnd(event)"
+         ondrop="onDrop(event,${i})">
+      <div class="drag-handle">⠿</div>
+      <div class="setup-cat-emoji-badge">${c.emoji}</div>
+      <div class="setup-cat-name">${c.label}</div>
+      <div class="setup-cat-actions">
+        <button class="setup-cat-action edit" onclick="openEditSettingsCat(${i})">✏️</button>
+        <button class="setup-cat-action del" onclick="tryDeleteSettingsCat(${i})">🗑️</button>
+      </div>
+    </div>`).join('')+
+    `<div class="setup-cat-item fixed-item">
+      <div class="drag-handle" style="opacity:0.3">⠿</div>
+      <div class="setup-cat-emoji-badge">📦</div>
+      <div class="setup-cat-name">Otro</div>
+      <div style="font-size:11px;color:var(--text3)">Fija</div>
+    </div>`;
+}
+
+function renderSettingsCatPreview(){
+  const grid=document.getElementById('settings-cat-preview');
+  if(!grid) return;
+  const allCats=[...setupCats,CAT_OTRO];
+  grid.innerHTML=allCats.map(c=>`
+    <div class="cat-btn ${c.id==='otro'?'selected':''}" style="pointer-events:none">
+      <span class="cat-emoji">${c.emoji}</span>${c.label}
+    </div>`).join('');
+}
+
+// Helpers para settings cats (reusan setupCats igual que el setup)
+window.openEditSettingsCat=i=>{
+  document.getElementById('edit-cat-idx').value=i;
+  document.getElementById('edit-cat-emoji').value=setupCats[i].emoji;
+  document.getElementById('edit-cat-name').value=setupCats[i].label;
+  openModal('modal-edit-cat');
+};
+
+window.tryDeleteSettingsCat=i=>{
+  if(setupCats.length<=3){showToast('Mínimo 3 categorías');return;}
+  const catId=setupCats[i].id;
+  const inUse=movimientos.some(m=>m.cat===catId);
+  if(inUse){showToast('⚠️ Esta categoría está en uso, no puedes eliminarla');return;}
+  showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
+    setupCats.splice(i,1);
+    renderSettingsCatList();
+    renderSettingsCatPreview();
+  });
+};
+
+// Also hook the drag-drop callbacks to refresh settings preview
+const _origOnDrop=window.onDrop;
+window.onDrop=(e,idx)=>{
+  _origOnDrop(e,idx);
+  renderSettingsCatPreview();
+  renderSettingsCatList();
 };
 
 // Override saveSetup para modo edición (sabe si ya tiene config)
@@ -1316,13 +1437,15 @@ function renderAccountsList(){
 
 window.switchToAccount=async(uid,email)=>{
   closeModal('modal-accounts');
-  setTimeout(()=>{
-    showConfirm(`¿Cambiar a ${email}?`,'Tendrás que ingresar la contraseña de esa cuenta.','👤',async()=>{
-      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
-      await signOut(auth);
-      showToast('Inicia sesión con la otra cuenta 👤');
-    },'btn-save');
-  },350);
+  const overlay=document.getElementById('setup-saving-overlay');
+  const splashMsg=document.getElementById('splash-msg');
+  if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
+  overlay.style.display='flex';
+  if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+  await new Promise(r=>setTimeout(r,1200));
+  await signOut(auth);
+  overlay.style.display='none';
+  if(splashMsg) splashMsg.textContent='Personalizando tu perfil...';
 };
 
 window.startAddAccount=()=>{
@@ -1478,6 +1601,7 @@ function endTutorial(){
   tutorialActive = false;
   document.getElementById('tutorial-overlay').style.display = 'none';
   localStorage.removeItem('monify_show_tutorial');
+  localStorage.setItem('monify_tutorial_done','1');
 }
 
 document.getElementById('tutorial-next-btn').addEventListener('click', ()=>{
@@ -1529,3 +1653,118 @@ window.openModal = id => {
 // Hook into FAB click to also check after renderDestinoToggle
 const fabBtn = document.getElementById('fab-btn');
 fabBtn.addEventListener('click', ()=>{ setTimeout(updateAhorroBtn, 60); }, true);
+
+
+// ── SECTION TUTORIALS ────────────────────────────────
+const TUTORIAL_AHORRO = [
+  { selector: '.ahorro-saved-card', text: '🌱 Aquí ves el total ahorrado en esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
+  { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón, selecciona "Extra" y elige "Al ahorro".', position: 'top' }
+];
+const TUTORIAL_PRESTAMOS = [
+  { selector: '.prestamos-summary', text: '🤝 Aquí ves el resumen de todos tus préstamos activos: capital, ganancia y cobro quincenal.', position: 'bottom' },
+  { selector: '.fab', text: '➕ Toca aquí para registrar un nuevo préstamo. Puedes poner interés, fecha y notas.', position: 'top' }
+];
+
+function startSectionTutorial(section){
+  const steps = section==='ahorro' ? TUTORIAL_AHORRO : TUTORIAL_PRESTAMOS;
+  const doneKey = section==='ahorro' ? 'monify_tutorial_ahorro' : 'monify_tutorial_prestamos';
+  let step = 0;
+  tutorialActive = true;
+  document.getElementById('tutorial-overlay').style.display = 'block';
+
+  const badge = document.getElementById('tutorial-step-badge');
+  const text = document.getElementById('tutorial-text');
+  const nextBtn = document.getElementById('tutorial-next-btn');
+  const skipBtn = document.getElementById('tutorial-skip-btn');
+
+  function showStep(){
+    if(step >= steps.length){ endSectionTutorial(doneKey); return; }
+    const s = steps[step];
+    badge.textContent = `${section==='ahorro'?'Ahorro':'Préstamos'} · Paso ${step+1} de ${steps.length}`;
+    text.textContent = s.text;
+    nextBtn.textContent = step === steps.length-1 ? '¡Listo! ✓' : 'Siguiente →';
+    const target = document.querySelector(s.selector);
+    drawTutorialCanvas(target);
+    positionTutorialTooltip(target, s.position);
+  }
+
+  // Override next button temporarily
+  const origNext = nextBtn.onclick;
+  nextBtn.onclick = ()=>{ step++; showStep(); };
+  const origSkip = skipBtn.onclick;
+  skipBtn.onclick = ()=>endSectionTutorial(doneKey);
+
+  showStep();
+
+  function endSectionTutorial(key){
+    tutorialActive = false;
+    document.getElementById('tutorial-overlay').style.display = 'none';
+    localStorage.setItem(key,'1');
+    nextBtn.onclick = origNext;
+    skipBtn.onclick = origSkip;
+  }
+}
+
+// Tutorial for ahorro/prestamos tab on first visit (if section was active from setup)
+const _tabClickOrig = {};
+function hookTabTutorial(){
+  document.querySelectorAll('.nav-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      const t = tab.dataset.tab;
+      if(t==='ahorro' && !localStorage.getItem('monify_tutorial_ahorro')){
+        setTimeout(()=>startSectionTutorial('ahorro'), 600);
+      } else if(t==='prestamos' && !localStorage.getItem('monify_tutorial_prestamos')){
+        setTimeout(()=>startSectionTutorial('prestamos'), 600);
+      }
+    });
+  });
+}
+// Call after rebuildNavTabs
+const _origRebuildNavTabs = window.rebuildNavTabs;
+
+// ── SETTINGS MODAL CAT HELPERS ────────────────────────
+window.showAddSettingsCatForm=()=>{
+  if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
+  document.getElementById('settings-add-cat-form').style.display='block';
+  document.getElementById('settings-add-cat-btn').style.display='none';
+  document.getElementById('settings-new-cat-emoji').value='';
+  document.getElementById('settings-new-cat-name').value='';
+};
+window.cancelAddSettingsCat=()=>{
+  document.getElementById('settings-add-cat-form').style.display='none';
+  document.getElementById('settings-add-cat-btn').style.display='block';
+};
+window.addSettingsCat=()=>{
+  const emoji=document.getElementById('settings-new-cat-emoji').value.trim();
+  const name=document.getElementById('settings-new-cat-name').value.trim();
+  if(!emoji){showToast('Pon un emoji');return;}
+  if(!name){showToast('Pon un nombre');return;}
+  if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
+  if(/^[a-zA-Z0-9]/.test(emoji)){showToast('⚠️ Pon un emoji, no letras');return;}
+  const dupName=setupCats.find(c=>c.label.toLowerCase()===name.toLowerCase());
+  if(dupName){showToast(`⚠️ Ya tienes una categoría llamada "${name}"`);return;}
+  const dupEmoji=setupCats.find(c=>c.emoji===emoji);
+  if(dupEmoji){showToast(`⚠️ El emoji ${emoji} ya lo usa "${dupEmoji.label}"`);return;}
+  const id='cat_'+Date.now();
+  setupCats.push({id,label:name,emoji,color:CAT_COLOR_POOL[setupCats.length%CAT_COLOR_POOL.length]});
+  cancelAddSettingsCat();
+  renderSettingsCatList();
+  renderSettingsCatPreview();
+};
+
+// Hook section switches in settings modal for warnings
+document.getElementById('settings-switch-ahorro')?.addEventListener('change',e=>{
+  checkSectionDisable('ahorro',e.target.checked);
+});
+document.getElementById('settings-switch-prestamos')?.addEventListener('change',e=>{
+  checkSectionDisable('prestamos',e.target.checked);
+});
+
+// Hook tab clicks for section tutorials
+document.addEventListener('DOMContentLoaded',()=>{ hookTabTutorial(); });
+// Also call after rebuildNavTabs since tabs are rebuilt dynamically
+const __origRebuildNavTabs = rebuildNavTabs;
+function rebuildNavTabs(){
+  __origRebuildNavTabs();
+  hookTabTutorial();
+}
