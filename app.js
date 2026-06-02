@@ -185,10 +185,25 @@ onAuthStateChanged(auth, async user => {
       am.style.display='flex'; am.style.flexDirection='column';
       startListeners();
     } else {
-      // Primera vez: mostrar pantalla de setup
-      document.getElementById('auth-screen').style.display='none';
-      document.getElementById('app-main').style.display='none';
-      showSetupScreen();
+      // Sin userConfig: puede ser cuenta nueva O cuenta vieja sin config
+      // Si ya tiene quincenas, es cuenta vieja -> crear config por defecto y entrar
+      const qCheck = await getDocs(query(collection(db,'quincenas'), where('uid','==',user.uid), limit(1)));
+      if(!qCheck.empty){
+        // Cuenta existente sin config: aplicar defaults y entrar sin setup
+        userConfig = { cats: [...DEFAULT_CATS], sections: { ahorro: true, prestamos: true } };
+        await setDoc(doc(db,'userConfig',user.uid), userConfig);
+        applyUserConfig();
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('setup-screen').style.display='none';
+        const am=document.getElementById('app-main');
+        am.style.display='flex'; am.style.flexDirection='column';
+        startListeners();
+      } else {
+        // Cuenta realmente nueva: mostrar setup
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('app-main').style.display='none';
+        showSetupScreen();
+      }
     }
   } else {
     if(user && !user.emailVerified) await signOut(auth);
