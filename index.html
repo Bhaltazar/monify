@@ -12,6 +12,22 @@
 <link rel="icon" href="icon-192.png">
 <title>MoniFy</title>
 <link rel="stylesheet" href="styles.css">
+<style>
+.settings-nav-row{display:flex;align-items:center;justify-content:space-between;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;color:var(--text);font-family:var(--font);transition:background .15s;text-align:left;}
+.settings-nav-row:active{background:var(--bg2);}
+.settings-nav-label{display:flex;align-items:center;gap:12px;}
+.settings-nav-icon{font-size:20px;}
+.settings-nav-title{font-size:14px;font-weight:600;color:var(--text);}
+.settings-nav-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.settings-nav-arrow{font-size:24px;color:var(--text3);line-height:1;}
+#modal-settings .modal{position:relative;overflow:hidden;}
+.settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
+.settings-subpanel.open{transform:translateX(0);}
+.settings-subpanel-header{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.settings-back-btn{background:none;border:none;color:var(--teal);font-size:20px;font-weight:700;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;}
+.settings-subpanel-title{font-size:15px;font-weight:700;color:var(--text);}
+.settings-subpanel-body{padding:16px;overflow-y:auto;flex:1;}
+</style>
 </head>
 <body>
 
@@ -90,7 +106,7 @@
     <div id="setup-step-1" class="setup-step-content">
       <div class="setup-section">
         <div class="setup-section-title">📂 Tus categorías</div>
-        <div class="setup-section-sub">Mín. 3, máx. 7 · "Otro" siempre al final</div>
+        <div class="setup-section-sub">Mín. 3, máx. 7</div>
 
         <div style="margin-bottom:14px;">
           <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Así se verán</div>
@@ -427,10 +443,32 @@
       <button class="btn-secondary" id="settings-add-cat-btn" style="margin-top:10px;" onclick="showAddSettingsCatForm()">＋ Nueva categoría</button>
     </div>
 
-    <!-- Secciones -->
+    <!-- Secciones: fila tipo Facebook -->
     <div class="setup-section" style="margin-bottom:16px;">
-      <div class="setup-section-title">🗂️ Secciones</div>
-      <div class="setup-section-sub">Activa las que quieras usar</div>
+      <button class="settings-nav-row" onclick="openSettingsSections()">
+        <span class="settings-nav-label">
+          <span class="settings-nav-icon">🗂️</span>
+          <span>
+            <div class="settings-nav-title">Editar Secciones</div>
+            <div class="settings-nav-sub">Ahorro · Préstamos</div>
+          </span>
+        </span>
+        <span class="settings-nav-arrow">›</span>
+      </button>
+    </div>
+
+    <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-settings')">Cancelar</button>
+  </div>
+
+  <!-- Panel secundario: Editar Secciones (desliza desde la derecha) -->
+  <div class="settings-subpanel" id="settings-subpanel-sections">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsSections()">‹ Volver</button>
+      <div class="settings-subpanel-title">🗂️ Secciones</div>
+    </div>
+    <div class="settings-subpanel-body">
+      <div class="setup-section-sub" style="margin-bottom:16px;">Activa las que quieras usar</div>
       <div class="setup-switch-row">
         <div>
           <div class="setup-switch-label">🌱 Ahorro</div>
@@ -452,9 +490,6 @@
         </label>
       </div>
     </div>
-
-    <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
-    <button class="btn-secondary" onclick="closeModal('modal-settings')">Cancelar</button>
   </div>
 </div>
 
