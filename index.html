@@ -24,7 +24,7 @@
 .settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
 .settings-subpanel.open{transform:translateX(0);}
 .settings-subpanel-header{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
-.settings-back-btn{background:none;border:none;color:var(--teal);font-size:20px;font-weight:700;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;}
+.settings-back-btn{background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;}
 .settings-subpanel-title{font-size:15px;font-weight:700;color:var(--text);}
 .settings-subpanel-body{padding:16px;overflow-y:auto;flex:1;}
 </style>
@@ -424,20 +424,69 @@
     <div class="setup-section" style="margin-bottom:14px;">
       <button class="settings-nav-row" onclick="openSettingsCats()">
         <span class="settings-nav-label">
-          <span class="settings-nav-icon">📂</span>
+          <span class="settings-nav-icon">🗃️</span>
           <span>
-            <div class="settings-nav-title">Editar Categorías</div>
-            <div class="settings-nav-sub">Mín. 3, máx. 7 · "Otro" siempre al final</div>
+            <div class="settings-nav-title">Categorías</div>
+            <div class="settings-nav-sub">Edita, agrega u ordena tus categorías</div>
           </span>
         </span>
         <span class="settings-nav-arrow">›</span>
       </button>
     </div>
 
-    <!-- Secciones: visible directo -->
+    <!-- Secciones: fila tipo Facebook -->
     <div class="setup-section" style="margin-bottom:16px;">
-      <div class="setup-section-title">🗂️ Secciones</div>
-      <div class="setup-section-sub">Activa las que quieras usar</div>
+      <button class="settings-nav-row" onclick="openSettingsSections()">
+        <span class="settings-nav-label">
+          <span class="settings-nav-icon">📌</span>
+          <span>
+            <div class="settings-nav-title">Secciones</div>
+            <div class="settings-nav-sub">Personaliza las secciones del menú</div>
+          </span>
+        </span>
+        <span class="settings-nav-arrow">›</span>
+      </button>
+    </div>
+
+    <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-settings')">Cancelar</button>
+  </div>
+
+  <!-- Panel secundario: Categorías -->
+  <div class="settings-subpanel" id="settings-subpanel-cats">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsCats()">‹</button>
+      <div class="settings-subpanel-title">🗃️ Categorías</div>
+    </div>
+    <div class="settings-subpanel-body">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Vista previa</div>
+        <div class="cat-grid" id="settings-cat-preview"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Ordenar y editar</div>
+      <div id="settings-cat-list" class="setup-cat-list"></div>
+      <div id="settings-add-cat-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <input class="form-input setup-emoji-input" type="text" id="settings-new-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+          <input class="form-input" type="text" id="settings-new-cat-name" placeholder="Nombre de categoría" maxlength="18" style="flex:1;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-save" style="margin-top:0;flex:1;" onclick="addSettingsCat()">Agregar</button>
+          <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="cancelAddSettingsCat()">Cancelar</button>
+        </div>
+      </div>
+      <button class="btn-secondary" id="settings-add-cat-btn" style="margin-top:10px;" onclick="showAddSettingsCatForm()">＋ Nueva categoría</button>
+    </div>
+  </div>
+
+  <!-- Panel secundario: Secciones -->
+  <div class="settings-subpanel" id="settings-subpanel-sections">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsSections()">‹</button>
+      <div class="settings-subpanel-title">📌 Secciones</div>
+    </div>
+    <div class="settings-subpanel-body">
+      <div class="setup-section-sub" style="margin-bottom:16px;">Personaliza las secciones del menú</div>
       <div class="setup-switch-row">
         <div>
           <div class="setup-switch-label">🌱 Ahorro</div>
@@ -458,36 +507,6 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
-    </div>
-
-    <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
-    <button class="btn-secondary" onclick="closeModal('modal-settings')">Cancelar</button>
-  </div>
-
-  <!-- Panel secundario: Editar Categorías (desliza desde la derecha) -->
-  <div class="settings-subpanel" id="settings-subpanel-cats">
-    <div class="settings-subpanel-header">
-      <button class="settings-back-btn" onclick="closeSettingsCats()">‹ Volver</button>
-      <div class="settings-subpanel-title">📂 Categorías</div>
-    </div>
-    <div class="settings-subpanel-body">
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Vista previa</div>
-        <div class="cat-grid" id="settings-cat-preview"></div>
-      </div>
-      <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Ordenar y editar</div>
-      <div id="settings-cat-list" class="setup-cat-list"></div>
-      <div id="settings-add-cat-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;">
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-          <input class="form-input setup-emoji-input" type="text" id="settings-new-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
-          <input class="form-input" type="text" id="settings-new-cat-name" placeholder="Nombre de categoría" maxlength="18" style="flex:1;">
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-save" style="margin-top:0;flex:1;" onclick="addSettingsCat()">Agregar</button>
-          <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="cancelAddSettingsCat()">Cancelar</button>
-        </div>
-      </div>
-      <button class="btn-secondary" id="settings-add-cat-btn" style="margin-top:10px;" onclick="showAddSettingsCatForm()">＋ Nueva categoría</button>
     </div>
   </div>
 </div>
