@@ -1335,7 +1335,7 @@ window.saveSetup=async()=>{
 window.openSettings=()=>{
   closeModal('modal-perfil');
   // Cerrar subpanel por si quedó abierto
-  const panel=document.getElementById('settings-subpanel-sections');
+  const panel=document.getElementById('settings-subpanel-cats');
   if(panel) panel.classList.remove('open');
   // Cargar config actual en el modal de settings
   if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
@@ -1447,13 +1447,13 @@ window.tryDeleteSettingsCat=i=>{
   },350);
 };
 
-// ── Subpanel Secciones (deslizable) ──
-window.openSettingsSections=()=>{
-  const panel=document.getElementById('settings-subpanel-sections');
+// ── Subpanel Categorías (deslizable) ──
+window.openSettingsCats=()=>{
+  const panel=document.getElementById('settings-subpanel-cats');
   if(panel) panel.classList.add('open');
 };
-window.closeSettingsSections=()=>{
-  const panel=document.getElementById('settings-subpanel-sections');
+window.closeSettingsCats=()=>{
+  const panel=document.getElementById('settings-subpanel-cats');
   if(panel) panel.classList.remove('open');
 };
 
