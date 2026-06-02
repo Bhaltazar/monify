@@ -1209,20 +1209,21 @@ window.onDrop=(e,idx)=>{
   renderSetupPreview();
 };
 
-// Touch drag for mobile
+// Touch drag for mobile — solo se activa desde el drag-handle (⠿)
 function addTouchDragToList(){
   const items=[...document.querySelectorAll('#setup-cat-list .setup-cat-item:not(.fixed-item)')];
   items.forEach((item,idx)=>{
-    let startY,startIdx,clone;
-    item.addEventListener('touchstart',e=>{
-      if(e.target.closest('.setup-cat-action'))return;
-      startY=e.touches[0].clientY;
-      startIdx=parseInt(item.dataset.idx);
-      setupDragIdx=startIdx;
+    const handle=item.querySelector('.drag-handle');
+    if(!handle) return;
+
+    handle.addEventListener('touchstart',e=>{
+      e.preventDefault(); // evitar scroll cuando se toca el handle
+      setupDragIdx=parseInt(item.dataset.idx);
       item.classList.add('dragging');
-    },{passive:true});
-    item.addEventListener('touchmove',e=>{
-      if(setupDragIdx===null)return;
+    },{passive:false});
+
+    handle.addEventListener('touchmove',e=>{
+      if(setupDragIdx===null) return;
       e.preventDefault();
       const y=e.touches[0].clientY;
       const allItems=[...document.querySelectorAll('#setup-cat-list .setup-cat-item:not(.fixed-item)')];
@@ -1236,8 +1237,9 @@ function addTouchDragToList(){
         }
       });
     },{passive:false});
-    item.addEventListener('touchend',e=>{
-      if(setupDragIdx===null)return;
+
+    handle.addEventListener('touchend',e=>{
+      if(setupDragIdx===null) return;
       item.classList.remove('dragging');
       document.querySelectorAll('.setup-cat-item').forEach(el=>el.classList.remove('drag-over'));
       if(setupDragOverIdx!==null&&setupDragOverIdx!==setupDragIdx){
