@@ -718,10 +718,17 @@ window.savePrestamo = async () => {
     totalACobrar:calc.total,ganancia:calc.ganancia,quincenal:calc.quincenal,mensual:calc.mensual,
     ...(!editId&&{pagado:0,status:'activo',createdAt:Date.now()})};
   try {
-    if(editId){await updateDoc(doc(db,'prestamos',editId),data);showToast('✅ Préstamo actualizado');}
-    else{await addDoc(collection(db,'prestamos'),data);showToast('💸 Préstamo registrado');}
+    if(editId){
+      await updateDoc(doc(db,'prestamos',editId),data);
+      showToast('✅ Préstamo actualizado');
+      closeModal('modal-prestamo');
+      clearPrestamoForm();
+      // Volver a abrir el detail del préstamo
+      setTimeout(()=>showPrestamoDetail(editId),300);
+    }
+    else{await addDoc(collection(db,'prestamos'),data);showToast('💸 Préstamo registrado');
     closeModal('modal-prestamo');
-    clearPrestamoForm();
+    clearPrestamoForm();}
   } catch(e){showToast('Error al guardar');}
 };
 
@@ -879,6 +886,8 @@ window.savePago=async()=>{
     }
     closeModal('modal-pago');
     showToast(tipoRegistro==='interes'?'🔄 Interés registrado':'💵 Abono registrado');
+    // Volver a abrir el detail del préstamo
+    setTimeout(()=>showPrestamoDetail(prestamoId),300);
   } catch(e){showToast('Error al guardar');}
 };
 
@@ -1334,9 +1343,11 @@ window.saveSetup=async()=>{
 // ── SETTINGS (volver a config desde perfil) ────────────
 window.openSettings=()=>{
   closeModal('modal-perfil');
-  // Cerrar subpanel por si quedó abierto
-  const panel=document.getElementById('settings-subpanel-cats');
-  if(panel) panel.classList.remove('open');
+  // Cerrar subpaneles por si quedaron abiertos
+  const panelCats=document.getElementById('settings-subpanel-cats');
+  if(panelCats) panelCats.classList.remove('open');
+  const panelSec=document.getElementById('settings-subpanel-sections');
+  if(panelSec) panelSec.classList.remove('open');
   // Cargar config actual en el modal de settings
   if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
   else setupCats=[...DEFAULT_CATS];
@@ -1441,8 +1452,11 @@ window.tryDeleteSettingsCat=i=>{
       renderSettingsCatList();
       renderSettingsCatPreview();
       showToast('🗑️ Categoría eliminada');
-      // Reabrir settings después de la acción
-      setTimeout(()=>openModal('modal-settings'),200);
+      // Regresar al modal de settings y abrir directo el subpanel de cats
+      setTimeout(()=>{
+        openModal('modal-settings');
+        setTimeout(()=>openSettingsCats(),50);
+      },200);
     });
   },350);
 };
@@ -1454,6 +1468,16 @@ window.openSettingsCats=()=>{
 };
 window.closeSettingsCats=()=>{
   const panel=document.getElementById('settings-subpanel-cats');
+  if(panel) panel.classList.remove('open');
+};
+
+// ── Subpanel Secciones (deslizable) ──
+window.openSettingsSections=()=>{
+  const panel=document.getElementById('settings-subpanel-sections');
+  if(panel) panel.classList.add('open');
+};
+window.closeSettingsSections=()=>{
+  const panel=document.getElementById('settings-subpanel-sections');
   if(panel) panel.classList.remove('open');
 };
 
