@@ -69,14 +69,40 @@ const today = () => {
 const quincenaLabel = q => q ? `${fmtDate(q.inicio)} – ${fmtDate(q.fin)}` : '--';
 const getInitials = n => n ? n.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
 
-function showToast(msg, dur=2800) {
+const _toastQueue = [];
+let _toastActive = false;
+
+function _getToastClass(msg) {
+  if (/✅/.test(msg)) return 'toast-success';
+  if (/⚠️/.test(msg)) return 'toast-warning';
+  if (/🗑️/.test(msg)) return 'toast-danger';
+  return 'toast-info';
+}
+
+function _runToastQueue() {
+  if (_toastActive || _toastQueue.length === 0) return;
+  _toastActive = true;
+  const { msg, dur } = _toastQueue.shift();
   const t = document.getElementById('toast');
-  t.classList.remove('show');
+  // Limpiar clases de color anteriores
+  t.classList.remove('toast-success', 'toast-warning', 'toast-danger', 'toast-info');
+  t.classList.add(_getToastClass(msg));
   t.textContent = msg;
   requestAnimationFrame(() => requestAnimationFrame(() => {
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), dur);
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => {
+        _toastActive = false;
+        _runToastQueue();
+      }, 350); // esperar que termine la animación de salida
+    }, dur);
   }));
+}
+
+function showToast(msg, dur=2800) {
+  _toastQueue.push({ msg, dur });
+  _runToastQueue();
 }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
