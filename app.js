@@ -1719,9 +1719,6 @@ function hookTabTutorial(){
     });
   });
 }
-// Call after rebuildNavTabs
-const _origRebuildNavTabs = window.rebuildNavTabs;
-
 // ── SETTINGS MODAL CAT HELPERS ────────────────────────
 window.showAddSettingsCatForm=()=>{
   if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
@@ -1763,8 +1760,8 @@ document.getElementById('settings-switch-prestamos')?.addEventListener('change',
 // Hook tab clicks for section tutorials
 document.addEventListener('DOMContentLoaded',()=>{ hookTabTutorial(); });
 // Also call after rebuildNavTabs since tabs are rebuilt dynamically
-const __origRebuildNavTabs = rebuildNavTabs;
-function rebuildNavTabs(){
-  __origRebuildNavTabs();
+const _origRebuildNavTabsHook = window.rebuildNavTabs;
+window.rebuildNavTabs = function(){
+  _origRebuildNavTabsHook();
   hookTabTutorial();
-}
+};
