@@ -16,17 +16,30 @@ const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 setPersistence(auth, browserLocalPersistence);
 
-const CATS = [
-  {id:'comida',    label:'Comida',     emoji:'🍔'},
-  {id:'transporte',label:'Transporte', emoji:'🚌'},
-  {id:'escuela',   label:'Escuela',    emoji:'🎓'},
-  {id:'papeleria', label:'Papelería',  emoji:'📋'},
-  {id:'moto',       label:'Moto',       emoji:'🏍️'},
-  {id:'pareja',    label:'Pareja',     emoji:'💑'},
-  {id:'salidas',   label:'Salidas',    emoji:'🗺️'},
-  {id:'otro',      label:'Otro',       emoji:'📦'},
+// Categorías default al hacer setup (sin "otro", se agrega automáticamente al final)
+const DEFAULT_CATS = [
+  {id:'comida',     label:'Comida',     emoji:'🍔'},
+  {id:'transporte', label:'Transporte', emoji:'🚌'},
+  {id:'escuela',    label:'Escuela',    emoji:'🎓'},
+  {id:'servicios',  label:'Servicios',  emoji:'💡'},
 ];
-const CAT_COLORS = {comida:'#e0a8c0',transporte:'#7ecfcf',escuela:'#e8c97a',papeleria:'#85c9a0',moto:'#b5a8e0',pareja:'#f0a0c0',salidas:'#a8d8e0',otro:'#a09dba'};
+const CAT_OTRO = {id:'otro', label:'Otro', emoji:'📦'};
+
+// CATS y CAT_COLORS se construyen dinámicamente desde la config del usuario
+let CATS = [...DEFAULT_CATS, CAT_OTRO];
+const CAT_COLORS = {};
+const CAT_COLOR_POOL = ['#e0a8c0','#7ecfcf','#e8c97a','#85c9a0','#b5a8e0','#f0a0c0','#a8d8e0','#f0c070','#c0e085','#e0c0a8'];
+
+// Config del usuario (cargada desde Firestore)
+let userConfig = null; // {cats:[...], sections:{ahorro:bool, prestamos:bool}}
+
+// Setup state
+let setupCats = [...DEFAULT_CATS]; // sin "otro"
+let setupDragIdx = null;
+let setupDragOverIdx = null;
+
+// Multi-cuenta: guardadas en localStorage
+let savedAccounts = []; // [{uid, email, displayName}]
 
 let currentUser = null;
 let quincenas = [];
@@ -154,16 +167,34 @@ onAuthStateChanged(auth, async user => {
   if(user && user.emailVerified){
     currentUser=user;
     const snap=await getDoc(doc(db,'users',user.uid));
-    const username=snap.exists()?snap.data().username:(user.displayName||user.email.split('@')[0]);
+    const userData=snap.exists()?snap.data():{};
+    const username=userData.username||(user.displayName||user.email.split('@')[0]);
     setUserUI(username, user.email);
-    document.getElementById('auth-screen').style.display='none';
-    const am=document.getElementById('app-main');
-    am.style.display='flex'; am.style.flexDirection='column';
-    startListeners();
+    // Guardar cuenta en lista local
+    saveAccountLocally(user.uid, username, user.email);
+    loadSavedAccounts();
+    // Cargar config del usuario
+    const cfgSnap=await getDoc(doc(db,'userConfig',user.uid));
+    if(cfgSnap.exists()){
+      // Ya tiene config, cargar y entrar a la app
+      userConfig=cfgSnap.data();
+      applyUserConfig();
+      document.getElementById('auth-screen').style.display='none';
+      document.getElementById('setup-screen').style.display='none';
+      const am=document.getElementById('app-main');
+      am.style.display='flex'; am.style.flexDirection='column';
+      startListeners();
+    } else {
+      // Primera vez: mostrar pantalla de setup
+      document.getElementById('auth-screen').style.display='none';
+      document.getElementById('app-main').style.display='none';
+      showSetupScreen();
+    }
   } else {
     if(user && !user.emailVerified) await signOut(auth);
     currentUser=null; quincenas=[]; movimientos=[]; currentQuincenaId=null;
     document.getElementById('app-main').style.display='none';
+    document.getElementById('setup-screen').style.display='none';
     document.getElementById('auth-screen').style.display='flex';
   }
 });
@@ -821,6 +852,7 @@ function renderPrestamos(){
 function render(){
   document.getElementById('fab-btn').textContent=currentTab==='prestamos'?'＋ Nuevo préstamo':'＋ Agregar movimiento';
   updateHeader();
+  rebuildNavTabs();
   if(currentTab==='movimientos')renderMovimientos();
   else if(currentTab==='resumen')renderResumen();
   else if(currentTab==='ahorro')renderAhorro();
@@ -906,6 +938,341 @@ window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 ['p-capital','p-interes'].forEach(id=>{
   const el=document.getElementById(id);
   if(el)el.addEventListener('input',updatePrestamoPreview);
+});
+
+// ── NAV TABS: respetar secciones activas ──────────────
+function getActiveTabs(){
+  const tabs=['movimientos','resumen'];
+  if(!userConfig||userConfig.sections?.ahorro!==false) tabs.push('ahorro');
+  if(!userConfig||userConfig.sections?.prestamos!==false) tabs.push('prestamos');
+  return tabs;
+}
+
+function rebuildNavTabs(){
+  const tabs=getActiveTabs();
+  const labels={movimientos:'Movimientos',resumen:'Resumen',ahorro:'Ahorro',prestamos:'Préstamos'};
+  const nav=document.querySelector('.nav-tabs');
+  if(!nav)return;
+  nav.innerHTML=tabs.map(t=>`<div class="nav-tab${t===currentTab?' active':''}" data-tab="${t}">${labels[t]}</div>`).join('');
+  nav.querySelectorAll('.nav-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      nav.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      currentTab=tab.dataset.tab;
+      render();
+    });
+  });
+  if(!tabs.includes(currentTab)) currentTab='movimientos';
+}
+
+// ── USER CONFIG ────────────────────────────────────────
+function applyUserConfig(){
+  if(!userConfig) return;
+  // Aplicar categorías
+  if(userConfig.cats && userConfig.cats.length>0){
+    CATS=[...userConfig.cats, CAT_OTRO];
+    // Rebuilding CAT_COLORS
+    userConfig.cats.forEach((c,i)=>{
+      CAT_COLORS[c.id]=c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length];
+    });
+    CAT_COLORS['otro']='#a09dba';
+  }
+  rebuildNavTabs();
+}
+
+// ── SETUP SCREEN ───────────────────────────────────────
+function showSetupScreen(){
+  setupCats=[...DEFAULT_CATS];
+  document.getElementById('setup-screen').style.display='flex';
+  renderSetupCatList();
+  renderSetupPreview();
+}
+
+function renderSetupCatList(){
+  const list=document.getElementById('setup-cat-list');
+  // draggable items (without "otro")
+  list.innerHTML=setupCats.map((c,i)=>`
+    <div class="setup-cat-item" draggable="true" data-idx="${i}" 
+         ondragstart="onDragStart(event,${i})"
+         ondragover="onDragOver(event,${i})"
+         ondragend="onDragEnd(event)"
+         ondrop="onDrop(event,${i})">
+      <div class="drag-handle">⠿</div>
+      <div class="setup-cat-emoji-badge">${c.emoji}</div>
+      <div class="setup-cat-name">${c.label}</div>
+      <div class="setup-cat-actions">
+        <button class="setup-cat-action edit" onclick="openEditCat(${i})">✏️</button>
+        <button class="setup-cat-action del" onclick="tryDeleteSetupCat(${i})">🗑️</button>
+      </div>
+    </div>`).join('')+
+    `<div class="setup-cat-item fixed-item">
+      <div class="drag-handle" style="opacity:0.3">⠿</div>
+      <div class="setup-cat-emoji-badge">📦</div>
+      <div class="setup-cat-name">Otro</div>
+      <div style="font-size:11px;color:var(--text3)">Fija</div>
+    </div>`;
+  // Mobile touch drag support
+  addTouchDragToList();
+}
+
+function renderSetupPreview(){
+  const grid=document.getElementById('setup-cat-preview');
+  const allCats=[...setupCats,CAT_OTRO];
+  grid.innerHTML=allCats.map(c=>`
+    <div class="cat-btn ${c.id==='otro'?'selected':''}" style="pointer-events:none">
+      <span class="cat-emoji">${c.emoji}</span>${c.label}
+    </div>`).join('');
+}
+
+// ── DRAG & DROP ────────────────────────────────────────
+window.onDragStart=(e,idx)=>{
+  setupDragIdx=idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+};
+window.onDragOver=(e,idx)=>{
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.setup-cat-item').forEach(el=>el.classList.remove('drag-over'));
+  if(idx!==setupDragIdx){
+    e.currentTarget.classList.add('drag-over');
+    setupDragOverIdx=idx;
+  }
+};
+window.onDragEnd=(e)=>{
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.setup-cat-item').forEach(el=>el.classList.remove('drag-over'));
+};
+window.onDrop=(e,idx)=>{
+  e.preventDefault();
+  if(setupDragIdx===null||setupDragIdx===idx) return;
+  const moved=setupCats.splice(setupDragIdx,1)[0];
+  setupCats.splice(idx,0,moved);
+  setupDragIdx=null;
+  renderSetupCatList();
+  renderSetupPreview();
+};
+
+// Touch drag for mobile
+function addTouchDragToList(){
+  const items=[...document.querySelectorAll('#setup-cat-list .setup-cat-item:not(.fixed-item)')];
+  items.forEach((item,idx)=>{
+    let startY,startIdx,clone;
+    item.addEventListener('touchstart',e=>{
+      if(e.target.closest('.setup-cat-action'))return;
+      startY=e.touches[0].clientY;
+      startIdx=parseInt(item.dataset.idx);
+      setupDragIdx=startIdx;
+      item.classList.add('dragging');
+    },{passive:true});
+    item.addEventListener('touchmove',e=>{
+      if(setupDragIdx===null)return;
+      e.preventDefault();
+      const y=e.touches[0].clientY;
+      const allItems=[...document.querySelectorAll('#setup-cat-list .setup-cat-item:not(.fixed-item)')];
+      allItems.forEach((el,i)=>{
+        const rect=el.getBoundingClientRect();
+        if(y>=rect.top&&y<=rect.bottom&&i!==setupDragIdx){
+          el.classList.add('drag-over');
+          setupDragOverIdx=i;
+        } else {
+          el.classList.remove('drag-over');
+        }
+      });
+    },{passive:false});
+    item.addEventListener('touchend',e=>{
+      if(setupDragIdx===null)return;
+      item.classList.remove('dragging');
+      document.querySelectorAll('.setup-cat-item').forEach(el=>el.classList.remove('drag-over'));
+      if(setupDragOverIdx!==null&&setupDragOverIdx!==setupDragIdx){
+        const moved=setupCats.splice(setupDragIdx,1)[0];
+        setupCats.splice(setupDragOverIdx,0,moved);
+      }
+      setupDragIdx=null; setupDragOverIdx=null;
+      renderSetupCatList();
+      renderSetupPreview();
+    });
+  });
+}
+
+window.showAddCatForm=()=>{
+  if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
+  document.getElementById('setup-add-cat-form').style.display='block';
+  document.getElementById('setup-add-cat-btn').style.display='none';
+  document.getElementById('new-cat-emoji').value='';
+  document.getElementById('new-cat-name').value='';
+};
+window.cancelAddCat=()=>{
+  document.getElementById('setup-add-cat-form').style.display='none';
+  document.getElementById('setup-add-cat-btn').style.display='block';
+};
+window.addSetupCat=()=>{
+  const emoji=document.getElementById('new-cat-emoji').value.trim();
+  const name=document.getElementById('new-cat-name').value.trim();
+  if(!emoji){showToast('Pon un emoji');return;}
+  if(!name){showToast('Pon un nombre');return;}
+  if(setupCats.length>=7){showToast('Máximo 7 categorías');return;}
+  const id='cat_'+Date.now();
+  setupCats.push({id,label:name,emoji,color:CAT_COLOR_POOL[setupCats.length%CAT_COLOR_POOL.length]});
+  cancelAddCat();
+  renderSetupCatList();
+  renderSetupPreview();
+};
+
+window.tryDeleteSetupCat=i=>{
+  if(setupCats.length<=3){showToast('Mínimo 3 categorías');return;}
+  showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
+    setupCats.splice(i,1);
+    renderSetupCatList();
+    renderSetupPreview();
+  });
+};
+
+window.openEditCat=i=>{
+  document.getElementById('edit-cat-idx').value=i;
+  document.getElementById('edit-cat-emoji').value=setupCats[i].emoji;
+  document.getElementById('edit-cat-name').value=setupCats[i].label;
+  openModal('modal-edit-cat');
+};
+window.saveEditCat=()=>{
+  const i=parseInt(document.getElementById('edit-cat-idx').value);
+  const emoji=document.getElementById('edit-cat-emoji').value.trim();
+  const name=document.getElementById('edit-cat-name').value.trim();
+  if(!emoji||!name){showToast('Emoji y nombre son obligatorios');return;}
+  setupCats[i]={...setupCats[i],emoji,label:name};
+  closeModal('modal-edit-cat');
+  renderSetupCatList();
+  renderSetupPreview();
+};
+
+window.saveSetup=async()=>{
+  if(setupCats.length<3){showToast('Necesitas al menos 3 categorías');return;}
+  // Mostrar overlay de carga
+  const overlay=document.getElementById('setup-saving-overlay');
+  overlay.style.display='flex';
+  try {
+    const cats=setupCats.map((c,i)=>({...c,color:c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length]}));
+    const sections={
+      ahorro:document.getElementById('setup-switch-ahorro').checked,
+      prestamos:document.getElementById('setup-switch-prestamos').checked
+    };
+    userConfig={cats,sections};
+    await setDoc(doc(db,'userConfig',currentUser.uid),userConfig);
+    applyUserConfig();
+    await new Promise(r=>setTimeout(r,1800));
+    overlay.style.display='none';
+    document.getElementById('setup-screen').style.display='none';
+    const am=document.getElementById('app-main');
+    am.style.display='flex'; am.style.flexDirection='column';
+    startListeners();
+  } catch(e){
+    overlay.style.display='none';
+    showToast('Error al guardar configuración');
+  }
+};
+
+// ── SETTINGS (volver a config desde perfil) ────────────
+window.openSettings=()=>{
+  closeModal('modal-perfil');
+  // Iniciar setupCats con la config actual
+  if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
+  else setupCats=[...DEFAULT_CATS];
+  document.getElementById('setup-switch-ahorro').checked=userConfig?.sections?.ahorro||false;
+  document.getElementById('setup-switch-prestamos').checked=userConfig?.sections?.prestamos||false;
+  document.getElementById('app-main').style.display='none';
+  const ss=document.getElementById('setup-screen');
+  ss.style.display='flex';
+  renderSetupCatList();
+  renderSetupPreview();
+};
+
+// Override saveSetup para modo edición (sabe si ya tiene config)
+// La función saveSetup ya guarda correctamente en ambos casos.
+
+// ── MULTI-CUENTA ────────────────────────────────────────
+function saveAccountLocally(uid,displayName,email){
+  try {
+    let accounts=JSON.parse(localStorage.getItem('monify_accounts')||'[]');
+    const existing=accounts.findIndex(a=>a.uid===uid);
+    const entry={uid,displayName,email};
+    if(existing>=0) accounts[existing]=entry;
+    else accounts.push(entry);
+    // Máximo 2 cuentas
+    if(accounts.length>2) accounts=accounts.slice(-2);
+    localStorage.setItem('monify_accounts',JSON.stringify(accounts));
+  } catch(e){}
+}
+
+function loadSavedAccounts(){
+  try {
+    savedAccounts=JSON.parse(localStorage.getItem('monify_accounts')||'[]');
+  } catch(e){ savedAccounts=[]; }
+}
+
+window.openAccountsModal=async()=>{
+  closeModal('modal-perfil');
+  loadSavedAccounts();
+  renderAccountsList();
+  openModal('modal-accounts');
+};
+
+function renderAccountsList(){
+  const list=document.getElementById('accounts-list');
+  const addBtn=document.getElementById('add-account-btn');
+  list.innerHTML=savedAccounts.map(a=>{
+    const isActive=currentUser&&a.uid===currentUser.uid;
+    const onclick=isActive?'':'onclick="switchToAccount(\''+a.uid+'\',\''+a.email+'\')"';
+    return '<div class="account-item '+(isActive?'active-account':'')+'" '+onclick+'>'
+      +'<div class="account-avatar">'+getInitials(a.displayName)+'</div>'
+      +'<div class="account-info">'
+      +'<div class="account-name">'+a.displayName+'</div>'
+      +'<div class="account-email">'+a.email+'</div>'
+      +'</div>'
+      +(isActive?'<div class="account-active-badge">Activa</div>':'')
+      +'</div>';
+  }).join('');
+  // Solo mostrar botón agregar si hay menos de 2 cuentas
+  addBtn.style.display=savedAccounts.length>=2?'none':'block';
+}
+
+window.switchToAccount=async(uid,email)=>{
+  closeModal('modal-accounts');
+  setTimeout(()=>{
+    showConfirm(`¿Cambiar a ${email}?`,'Tendrás que ingresar la contraseña de esa cuenta.','👤',async()=>{
+      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+      await signOut(auth);
+      showToast('Inicia sesión con la otra cuenta 👤');
+    },'btn-save');
+  },350);
+};
+
+window.startAddAccount=()=>{
+  closeModal('modal-accounts');
+  setTimeout(()=>{
+    if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+    signOut(auth).then(()=>showToast('Inicia sesión con la segunda cuenta'));
+  },350);
+};
+
+// ── CONFIGURACIÓN DE SECCIONES (desde settings ya guardado) ──
+// Override del switch en settings: avisar si hay datos activos
+function checkSectionDisable(section,isChecked){
+  if(isChecked) return; // activando, sin problema
+  if(section==='ahorro'){
+    const hasAhorro=movimientos.some(m=>m.type==='ingreso'&&m.destino==='ahorro');
+    if(hasAhorro) showToast('⚠️ Tienes ahorros registrados. Se guardarán pero la sección se ocultará.');
+  }
+  if(section==='prestamos'){
+    const hasActive=prestamos.some(p=>p.status==='activo');
+    if(hasActive) showToast('⚠️ Tienes préstamos activos. Se guardarán pero la sección se ocultará.');
+  }
+}
+
+document.getElementById('setup-switch-ahorro').addEventListener('change',e=>{
+  checkSectionDisable('ahorro',e.target.checked);
+});
+document.getElementById('setup-switch-prestamos').addEventListener('change',e=>{
+  checkSectionDisable('prestamos',e.target.checked);
 });
 
 renderCatGrid();
