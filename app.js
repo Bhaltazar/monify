@@ -220,8 +220,26 @@ onAuthStateChanged(auth, async user => {
       // Si ya tiene quincenas, es cuenta vieja -> crear config por defecto y entrar
       const qCheck = await getDocs(query(collection(db,'quincenas'), where('uid','==',user.uid), limit(1)));
       if(!qCheck.empty){
-        // Cuenta existente sin config: aplicar defaults y entrar sin setup
-        userConfig = { cats: [...DEFAULT_CATS], sections: { ahorro: true, prestamos: true } };
+        // Cuenta existente sin config: intentar recuperar cats reales desde movimientos
+        let recoveredCats = [...DEFAULT_CATS];
+        try {
+          const movsSnap = await getDocs(query(collection(db,'movimientos'), where('uid','==',user.uid)));
+          const catMap = {};
+          movsSnap.docs.forEach(d => {
+            const m = d.data();
+            if(m.cat && m.cat !== 'otro' && !catMap[m.cat]) catMap[m.cat] = true;
+          });
+          const catIds = Object.keys(catMap);
+          if(catIds.length > 0){
+            const defaultMap = {};
+            DEFAULT_CATS.forEach(c => defaultMap[c.id] = c);
+            recoveredCats = catIds.map((id, i) => {
+              if(defaultMap[id]) return defaultMap[id];
+              return { id, label: id.charAt(0).toUpperCase()+id.slice(1), emoji: '📁', color: CAT_COLOR_POOL[i % CAT_COLOR_POOL.length] };
+            });
+          }
+        } catch(e){ /* si falla, usamos defaults */ }
+        userConfig = { cats: recoveredCats, sections: { ahorro: true, prestamos: true } };
         await setDoc(doc(db,'userConfig',user.uid), userConfig);
         applyUserConfig();
         document.getElementById('auth-screen').style.display='none';
@@ -288,7 +306,10 @@ function startListeners(){
     query(collection(db,'quincenas'),where('uid','==',currentUser.uid),orderBy('inicio','desc')),
     snap=>{
       quincenas=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(!currentQuincenaId && quincenas.length>0) currentQuincenaId=quincenas[0].id;
+      // Si el ID activo no pertenece a este usuario, resetear al más reciente
+      if(!currentQuincenaId || !quincenas.find(q=>q.id===currentQuincenaId)){
+        currentQuincenaId=quincenas.length>0 ? quincenas[0].id : null;
+      }
       startMovsListener();
       render();
       // Launch tutorial if flagged (only first time)
