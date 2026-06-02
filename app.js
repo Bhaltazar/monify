@@ -471,10 +471,14 @@ window.saveMovimiento = async () => {
   if(isNaN(monto)||monto<=0){showToast('Ingresa un monto válido');return;}
   const desc=document.getElementById('input-desc').value.trim();
   const fecha=document.getElementById('input-fecha').value||today();
-  const destino=currentType==='ingreso'?currentDestino:'gasto';
+  const isAhorroTransfer=currentType==='ahorro-transfer';
+  // ahorro-transfer se guarda como type='ahorro-transfer', destino='ahorro', cat='otro'
+  const type=isAhorroTransfer?'ahorro-transfer':currentType;
+  const destino=isAhorroTransfer?'ahorro':(currentType==='ingreso'?currentDestino:'gasto');
+  const cat=isAhorroTransfer?'otro':selectedCat;
   try {
     if(editingMovId){
-      await updateDoc(doc(db,'movimientos',editingMovId),{monto,desc,fecha,cat:selectedCat,type:currentType,destino});
+      await updateDoc(doc(db,'movimientos',editingMovId),{monto,desc,fecha,cat,type,destino});
       editingMovId=null;
       document.getElementById('modal-add-title').textContent='Nuevo movimiento';
       closeModal('modal-add');
@@ -482,10 +486,11 @@ window.saveMovimiento = async () => {
     } else {
       await addDoc(collection(db,'movimientos'),{
         uid:currentUser.uid,quincenaId:currentQuincenaId,
-        monto,desc,fecha,cat:selectedCat,type:currentType,destino,createdAt:Date.now()
+        monto,desc,fecha,cat,type,destino,createdAt:Date.now()
       });
       closeModal('modal-add');
-      if(currentType==='gasto') showToast('💸 Gasto registrado');
+      if(type==='gasto') showToast('💸 Gasto registrado');
+      else if(type==='ahorro-transfer') showToast('💲 Movido al ahorro');
       else if(destino==='ahorro') showToast('🌱 Extra guardado en tu ahorro');
       else showToast('💰 Extra sumado a tu disponible');
     }
@@ -496,12 +501,18 @@ window.showDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
   const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
-  document.getElementById('detail-title').textContent=m.desc||cat.label;
+  const isAhorroTransfer=m.type==='ahorro-transfer';
+  const emoji=isAhorroTransfer?'💲':isAhorro?'🌱':(m.type==='ingreso'&&m.destino==='disponible')?'💰':cat.emoji;
+  const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':(m.type==='ingreso'&&m.destino==='disponible')?'Extra':cat.label;
+  const color=isAhorroTransfer?'var(--teal)':m.type==='gasto'?'var(--red)':isAhorro?'var(--teal)':'var(--green)';
+  const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
+  document.getElementById('detail-title').textContent=m.desc||label;
   document.getElementById('detail-content').innerHTML=`
     <div style="text-align:center;padding:12px 0 20px">
-      <div style="font-size:48px;margin-bottom:8px">${cat.emoji}</div>
-      <div style="font-size:32px;font-weight:600;color:${m.type==='gasto'?'var(--red)':isAhorro?'var(--teal)':'var(--green)'}">${m.type==='gasto'?'-':'+'}${fmt(m.monto)}</div>
-      <div style="font-size:13px;color:var(--text3);margin-top:6px">${cat.label} · ${fmtDate(m.fecha)}</div>
+      <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
+      <div style="font-size:32px;font-weight:600;color:${color}">${sign}${fmt(m.monto)}</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
+      ${isAhorroTransfer?`<div style="font-size:12px;margin-top:4px;color:var(--teal)">💲 Movido de disponible al ahorro</div>`:''}
       ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💰 Fue al disponible'}</div>`:''}
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
@@ -522,17 +533,17 @@ window.openEditMovimiento = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   editingMovId=id;
   currentType=m.type;
-  // Bug 1 fix: si es ingreso respetamos el destino guardado; si es gasto reseteamos a 'ahorro'
-  // para que si el usuario cambia a ingreso, el destino parta limpio en 'ahorro'
   currentDestino=m.type==='ingreso'?(m.destino==='disponible'?'disponible':'ahorro'):'ahorro';
   selectedCat=m.cat||'otro';
   document.getElementById('input-monto').value=m.monto;
   document.getElementById('input-desc').value=m.desc||'';
   document.getElementById('input-fecha').value=m.fecha;
   document.getElementById('modal-add-title').textContent='Editar movimiento';
-  // CAMBIO: siempre mostrar categorías para ingresos también
-  document.getElementById('destino-wrap').style.display=m.type==='ingreso'?'block':'none';
-  document.getElementById('cat-wrap').style.display='block';
+  const isAhorroTransfer=m.type==='ahorro-transfer';
+  const isIngreso=m.type==='ingreso';
+  document.getElementById('destino-wrap').style.display=isIngreso?'block':'none';
+  document.getElementById('ahorro-transfer-hint').style.display=isAhorroTransfer?'block':'none';
+  document.getElementById('cat-wrap').style.display=(isAhorroTransfer||isIngreso)?'none':'block';
   renderTypeToggle(); renderDestinoToggle(); renderCatGrid();
   closeModal('modal-detail');
   openModal('modal-add');
@@ -545,10 +556,11 @@ function updateHeader(){
   const q=getCurrentQ();
   document.getElementById('current-quincena-label').textContent=q?quincenaLabel(q):'Sin quincena';
   const gastos=movimientos.filter(m=>m.type==='gasto').reduce((a,m)=>a+m.monto,0);
+  const ahorroTransfers=movimientos.filter(m=>m.type==='ahorro-transfer').reduce((a,m)=>a+m.monto,0);
   const extrasDisp=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='disponible').reduce((a,m)=>a+m.monto,0);
-  const ahorrado=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').reduce((a,m)=>a+m.monto,0);
+  const ahorrado=movimientos.filter(m=>(m.type==='ingreso'&&m.destino==='ahorro')||m.type==='ahorro-transfer').reduce((a,m)=>a+m.monto,0);
   const inicial=q?q.saldo:0;
-  const disponible=inicial-gastos+extrasDisp;
+  const disponible=inicial-gastos-ahorroTransfers+extrasDisp;
   document.getElementById('saldo-inicial-display').textContent=fmt(inicial);
   document.getElementById('saldo-actual-display').textContent=fmt(disponible);
   document.getElementById('total-gastado-display').textContent=fmt(gastos);
@@ -574,14 +586,18 @@ function renderMovimientos(){
       const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
       const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
       const isDisp=m.type==='ingreso'&&m.destino==='disponible';
-      const amtClass=m.type==='gasto'?'':isAhorro?'ingreso-ahorro':'ingreso-disp';
+      const isAhorroTransfer=m.type==='ahorro-transfer';
+      const emoji=isAhorroTransfer?'💲':isAhorro?'🌱':isDisp?'💰':cat.emoji;
+      const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':isDisp?'Extra':cat.label;
+      const amtClass=isAhorroTransfer?'ingreso-ahorro':m.type==='gasto'?'':isAhorro?'ingreso-ahorro':'ingreso-disp';
+      const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
       html+=`<div class="gasto-item" onclick="showDetail('${m.id}')">
-        <div class="gasto-icon">${cat.emoji}</div>
+        <div class="gasto-icon">${emoji}</div>
         <div class="gasto-info">
-          <div class="gasto-desc">${m.desc||cat.label}</div>
-          <div class="gasto-cat">${cat.label}${isAhorro?' · 🌱 Ahorro':isDisp?' · 💰 Extra':''}</div>
+          <div class="gasto-desc">${m.desc||label}</div>
+          <div class="gasto-cat">${label}</div>
         </div>
-        <div class="gasto-amount ${amtClass}">${m.type==='gasto'?'-':'+'}${fmt(m.monto)}</div>
+        <div class="gasto-amount ${amtClass}">${sign}${fmt(m.monto)}</div>
       </div>`;
     });
     html+='</div>';
@@ -651,21 +667,23 @@ window.switchResumenTab = tab => { resumenTab=tab; renderResumen(); };
 // ── AHORRO (SIMPLIFICADO) ─────────────────────────────
 function renderAhorro(){
   const content=document.getElementById('main-content');
-  const ahorroMovs=movimientos.filter(m=>m.type==='ingreso'&&m.destino==='ahorro').sort((a,b)=>{
+  const ahorroMovs=movimientos.filter(m=>(m.type==='ingreso'&&m.destino==='ahorro')||m.type==='ahorro-transfer').sort((a,b)=>{
     if(b.fecha!==a.fecha) return b.fecha.localeCompare(a.fecha);
     return (b.createdAt||0)-(a.createdAt||0);
   });
   const ahorradoTotal=ahorroMovs.reduce((a,m)=>a+m.monto,0);
 
-  // Historial con emoji+categoría igual que en movimientos, y botón editar
   const histHTML=ahorroMovs.length>0
     ? ahorroMovs.map(m=>{
+        const isTransfer=m.type==='ahorro-transfer';
         const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
+        const emoji=isTransfer?'💲':'🌱';
+        const label=isTransfer?'Al ahorro':'Ahorro';
         return `<div class="gasto-item" onclick="showAhorroDetail('${m.id}')">
-          <div class="gasto-icon">${cat.emoji}</div>
+          <div class="gasto-icon">${emoji}</div>
           <div class="gasto-info">
-            <div class="gasto-desc">${m.desc||cat.label}</div>
-            <div class="gasto-cat">${cat.label} · 🌱 Ahorro · ${fmtDate(m.fecha)}</div>
+            <div class="gasto-desc">${m.desc||label}</div>
+            <div class="gasto-cat">${label} · ${fmtDate(m.fecha)}</div>
           </div>
           <div class="gasto-amount ingreso-ahorro">+${fmt(m.monto)}</div>
         </div>`;
@@ -685,14 +703,17 @@ function renderAhorro(){
 // Detalle/editar desde ahorro
 window.showAhorroDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
+  const isTransfer=m.type==='ahorro-transfer';
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
-  document.getElementById('detail-title').textContent=m.desc||cat.label;
+  const emoji=isTransfer?'💲':'🌱';
+  const label=isTransfer?'Al ahorro':'Ahorro';
+  document.getElementById('detail-title').textContent=m.desc||label;
   document.getElementById('detail-content').innerHTML=`
     <div style="text-align:center;padding:12px 0 20px">
-      <div style="font-size:48px;margin-bottom:8px">${cat.emoji}</div>
+      <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
       <div style="font-size:32px;font-weight:600;color:var(--teal)">+${fmt(m.monto)}</div>
-      <div style="font-size:13px;color:var(--text3);margin-top:6px">${cat.label} · ${fmtDate(m.fecha)}</div>
-      <div style="font-size:12px;margin-top:4px;color:var(--teal)">🌱 Fue al ahorro</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--teal)">${isTransfer?'💲 Movido de disponible al ahorro':'🌱 Fue al ahorro'}</div>
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
@@ -993,6 +1014,7 @@ document.getElementById('fab-btn').addEventListener('click',async()=>{
   document.getElementById('input-desc').value='';
   document.getElementById('input-fecha').value=today();
   document.getElementById('destino-wrap').style.display='none';
+  document.getElementById('ahorro-transfer-hint').style.display='none';
   document.getElementById('cat-wrap').style.display='block';
   renderTypeToggle();renderDestinoToggle();renderCatGrid();
   openModal('modal-add');
@@ -1019,6 +1041,7 @@ document.getElementById('quincena-badge-btn').addEventListener('click',async()=>
 // ── HELPERS ───────────────────────────────────────────
 function renderTypeToggle(){
   document.getElementById('type-gasto').className='type-btn'+(currentType==='gasto'?' active-gasto':'');
+  document.getElementById('type-ahorro-transfer').className='type-btn'+(currentType==='ahorro-transfer'?' active-ahorro':'');
   document.getElementById('type-ingreso').className='type-btn'+(currentType==='ingreso'?' active-ingreso':'');
 }
 function renderDestinoToggle(){
@@ -1036,9 +1059,12 @@ function renderCatGrid(){
 // CAMBIO: al ahorro también muestra categorías; solo se ocultan si… nada, siempre visibles
 window.setType=t=>{
   currentType=t;renderTypeToggle();
-  document.getElementById('destino-wrap').style.display=t==='ingreso'?'block':'none';
-  // Categorías SIEMPRE visibles
-  document.getElementById('cat-wrap').style.display='block';
+  const isIngreso=t==='ingreso';
+  const isAhorroTransfer=t==='ahorro-transfer';
+  document.getElementById('destino-wrap').style.display=isIngreso?'block':'none';
+  document.getElementById('ahorro-transfer-hint').style.display=isAhorroTransfer?'block':'none';
+  // Ocultar categorías para ahorro-transfer e ingreso
+  document.getElementById('cat-wrap').style.display=(isAhorroTransfer||isIngreso)?'none':'block';
 };
 window.setDestino=d=>{
   currentDestino=d;renderDestinoToggle();
