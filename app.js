@@ -63,7 +63,8 @@ window.togglePass = (inputId, btnId) => {
   if(!input) return;
   const isHidden = input.type === 'password';
   input.type = isHidden ? 'text' : 'password';
-  btn.textContent = isHidden ? '🙈' : '👁️';
+  const icon = btn.querySelector('.material-icons');
+  if(icon) icon.textContent = isHidden ? 'visibility_off' : 'visibility';
 };
 
 const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
