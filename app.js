@@ -1068,8 +1068,7 @@ window.setType=t=>{
 };
 window.setDestino=d=>{
   currentDestino=d;renderDestinoToggle();
-  // Categorías SIEMPRE visibles sin importar destino
-  document.getElementById('cat-wrap').style.display='block';
+  document.getElementById('cat-wrap').style.display=(currentType==='ingreso'||currentType==='ahorro-transfer')?'none':'block';
 };
 window.selectCat=id=>{selectedCat=id;renderCatGrid();};
 
