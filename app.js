@@ -1640,11 +1640,11 @@ async function checkSectionDisable(section,isChecked){
         });
       } catch(e){}
     }
-    if(hasAhorro) showToast('⚠️ Tienes ahorros registrados. Se guardarán pero la sección se ocultará.');
+    if(hasAhorro) showToast('⚠️ Tienes ahorros registrados en esta u otra quincena. Se guardarán y se ocultará la sección.');
   }
   if(section==='prestamos'){
     const hasActive=prestamos.some(p=>p.status==='activo');
-    if(hasActive) showToast('⚠️ Tienes préstamos activos. Se guardarán pero la sección se ocultará.');
+    if(hasActive) showToast('⚠️ Tienes préstamos activos en esta u otra quincena. Se guardarán y se ocultará la sección.');
   }
 }
 
