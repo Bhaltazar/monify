@@ -49,7 +49,10 @@
     </div>
     <div id="login-fields">
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com"></div>
-      <div class="form-group"><label class="form-label">CONTRASEÑA</label><input class="form-input" type="password" id="auth-pass" placeholder="••••••••"></div>
+      <div class="form-group"><label class="form-label">CONTRASEÑA</label><div style="position:relative;">
+        <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;">
+        <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1;" id="eye-login">👁️</button>
+      </div></div>
       <button class="btn-primary" onclick="loginEmail()">Entrar</button>
       <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
     </div>
@@ -58,7 +61,10 @@
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="reg-email" placeholder="tu@correo.com"></div>
       <div class="form-group">
         <label class="form-label">CONTRASEÑA</label>
-        <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20">
+        <div style="position:relative;">
+          <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20" style="padding-right:42px;">
+          <button type="button" onclick="togglePass('reg-pass','eye-reg')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1;" id="eye-reg">👁️</button>
+        </div>
         <div class="pass-hint" id="pass-hint"></div>
       </div>
       <button class="btn-primary" onclick="registerEmail()">Crear cuenta</button>
@@ -107,8 +113,8 @@
     <!-- PASO 1: Categorías -->
     <div id="setup-step-1" class="setup-step-content">
       <div class="setup-section">
-        <div class="setup-section-title">📂 Tus categorías</div>
-        <div class="setup-section-sub">Mín. 3, máx. 7 · "Otro" siempre al final</div>
+        <div class="setup-section-title">🗃️ Tus categorías</div>
+        <div class="setup-section-sub">Mín. 3, máx. 7.</div>
 
         <div style="margin-bottom:14px;">
           <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Así se verán</div>
@@ -137,7 +143,7 @@
     <!-- PASO 2: Secciones -->
     <div id="setup-step-2" class="setup-step-content" style="display:none;">
       <div class="setup-section">
-        <div class="setup-section-title">⚙️ Secciones</div>
+        <div class="setup-section-title">📌 Secciones</div>
         <div class="setup-section-sub">Activa las que quieras usar</div>
 
         <div class="setup-switch-row">
