@@ -12,6 +12,7 @@
 <link rel="icon" href="icon-192.png">
 <title>MoniFy</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 <style>
 .settings-nav-row{display:flex;align-items:center;justify-content:space-between;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;color:var(--text);font-family:var(--font);transition:background .15s;text-align:left;}
 .settings-nav-row:active{background:var(--bg2);}
@@ -51,7 +52,7 @@
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com"></div>
       <div class="form-group"><label class="form-label">CONTRASEÑA</label><div style="position:relative;">
         <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;">
-        <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1;" id="eye-login">👁️</button>
+        <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-login"><span class="material-icons" style="font-size:20px;">visibility</span></button>
       </div></div>
       <button class="btn-primary" onclick="loginEmail()">Entrar</button>
       <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
@@ -63,7 +64,7 @@
         <label class="form-label">CONTRASEÑA</label>
         <div style="position:relative;">
           <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20" style="padding-right:42px;">
-          <button type="button" onclick="togglePass('reg-pass','eye-reg')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1;" id="eye-reg">👁️</button>
+          <button type="button" onclick="togglePass('reg-pass','eye-reg')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-reg"><span class="material-icons" style="font-size:20px;">visibility</span></button>
         </div>
         <div class="pass-hint" id="pass-hint"></div>
       </div>
