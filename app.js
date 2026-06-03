@@ -1686,13 +1686,12 @@ const TUTORIAL_STEPS_BASE = [
     position: 'bottom'
   },
   {
+    // FAB step: explain button first, THEN open modal on next
     selector: '.fab',
-    text: '➕ Este botón es para agregar un movimiento. ¡Toca Siguiente para ver cómo funciona!',
-    position: 'top',
-    action: 'open-modal-add'
+    text: '➕ Este botón abre el formulario para registrar un movimiento. Toca Siguiente para ver cómo funciona.',
+    position: 'top'
   },
-  // Steps 4–6 are the modal sub-steps (injected dynamically at runtime)
-  // Step: avatar
+  // Step: avatar (appended at end dynamically)
   {
     selector: '.avatar-btn',
     text: '👤 Tu perfil: cambia tu nombre, gestiona cuentas o ajusta la configuración de secciones.',
@@ -1700,26 +1699,33 @@ const TUTORIAL_STEPS_BASE = [
   }
 ];
 
-// Modal sub-steps (inserted after FAB step)
+// Modal sub-steps for "Nuevo movimiento" (inserted after FAB step)
 const TUTORIAL_MODAL_STEPS = [
   {
+    // Open modal-add first, then explain Gasto button
     selector: '#type-gasto',
-    text: '🛍️ "Gasto" para registrar cualquier cosa que gastes: comida, transporte, servicios...',
+    text: '💸 "Gasto" para registrar cualquier cosa que gastes. Aquí también capturas el monto, una descripción opcional, la categoría y la fecha.',
     position: 'bottom',
-    modalOpen: true
+    action: 'open-modal-add'
   },
   {
     selector: '#type-ahorro-transfer',
-    text: '💰 "Ahorro" para mover dinero de tu disponible a tu ahorro personal.',
+    text: '💰 "Ahorro" para mover dinero de tu disponible a tu ahorro personal. El monto se descuenta de lo disponible y se guarda aparte.',
     position: 'bottom',
     modalOpen: true
   },
   {
     selector: '#type-ingreso',
-    text: '💲 "Extra" para registrar ingresos adicionales: bonos, regalos, ventas...',
+    text: '💲 "Extra" para registrar ingresos adicionales: bonos, ventas, regalos... Puedes mandarlo al ahorro o sumarlo a tu disponible.',
+    position: 'bottom',
+    modalOpen: true
+  },
+  {
+    selector: '.destino-toggle',
+    text: '🎯 Al registrar un Extra, tú decides: "Al ahorro" lo guarda en tu ahorro, "Al disponible" lo suma a tu saldo del que puedes gastar.',
     position: 'bottom',
     modalOpen: true,
-    action: 'close-modal-add'
+    action: 'show-destino-then-close'
   }
 ];
 
@@ -1727,11 +1733,30 @@ const TUTORIAL_MODAL_STEPS = [
 const TUTORIAL_AHORRO_STEPS = [
   { selector: '.nav-tab[data-tab="ahorro"]', text: '💰 Esta es la pestaña de Ahorro. Aquí verás el total que has guardado en la quincena.', position: 'bottom', action: 'switch-tab-ahorro' },
   { selector: '.ahorro-saved-card', text: '💰 Aquí ves el total ahorrado esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
-  { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón, selecciona "Ahorro" y listo.', position: 'top' }
+  { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón y selecciona "Ahorro".', position: 'top' }
 ];
+
+// Prestamos section steps
 const TUTORIAL_PRESTAMOS_STEPS = [
-  { selector: '.nav-tab[data-tab="prestamos"]', text: '🤝 Esta es la pestaña de Préstamos. Registra y controla lo que prestas.', position: 'bottom', action: 'switch-tab-prestamos' },
-  { selector: '.fab', text: '➕ Toca aquí para registrar un nuevo préstamo. Puedes poner interés, fecha y notas.', position: 'top' }
+  {
+    selector: '.fab',
+    text: '🤝 En la pestaña Préstamos, este botón cambia a "Nuevo préstamo". Toca Siguiente para ver el formulario.',
+    position: 'top',
+    action: 'switch-tab-prestamos'
+  },
+  {
+    selector: '#modal-prestamo .modal',
+    text: '📋 Aquí registras un préstamo: el nombre del deudor, el capital que prestaste, el interés quincenal (opcional), la fecha y notas del acuerdo.',
+    position: 'bottom',
+    action: 'open-modal-prestamo'
+  },
+  {
+    selector: '#modal-prestamo .modal',
+    text: '📊 MoniFy calculará automáticamente cuánto cobrar cada quincena y el total a recuperar. Al cerrar podrás registrar abonos e intereses cobrados.',
+    position: 'bottom',
+    modalOpen: true,
+    action: 'close-modal-prestamo'
+  }
 ];
 
 let TUTORIAL_STEPS = [...TUTORIAL_STEPS_BASE];
@@ -1740,11 +1765,10 @@ let tutorialActive = false;
 let tutorialAnimFrame = null;
 
 function buildTutorialSteps(){
-  // Base: balance, quincena, nav, fab
-  const base = TUTORIAL_STEPS_BASE.slice(0, 4); // up to FAB
-  const modalSteps = TUTORIAL_MODAL_STEPS;
+  // Base: balance, quincena, nav, fab (indices 0-3), avatar (index 4)
+  const base = TUTORIAL_STEPS_BASE.slice(0, 4); // balance, quincena, nav, fab
   const avatar = TUTORIAL_STEPS_BASE[4];
-  let steps = [...base, ...modalSteps];
+  let steps = [...base, ...TUTORIAL_MODAL_STEPS];
   // Append section steps if active from setup
   if(userConfig?.sections?.ahorro !== false){
     steps = steps.concat(TUTORIAL_AHORRO_STEPS);
@@ -1770,11 +1794,17 @@ async function renderTutorialStep(){
 
   // Handle actions before rendering
   if(step.action === 'open-modal-add'){
-    // open the add modal
+    // Show ingreso type to reveal destino-toggle, then open modal
+    currentType = 'ingreso'; currentDestino = 'ahorro';
     _origOpenModal('modal-add');
     await new Promise(r => setTimeout(r, 350));
+    // Make sure destino-wrap is visible for the destino step
+    document.getElementById('destino-wrap').style.display = 'block';
+    renderTypeToggle(); renderDestinoToggle();
+  } else if(step.action === 'show-destino-then-close'){
+    // Show destino toggle (already visible from open-modal-add), will close on next
   } else if(step.action === 'close-modal-add'){
-    // will close after user clicks next; handled in next-btn handler
+    // handled in next-btn
   } else if(step.action === 'switch-tab-ahorro'){
     currentTab = 'ahorro';
     render();
@@ -1783,6 +1813,12 @@ async function renderTutorialStep(){
     currentTab = 'prestamos';
     render();
     await new Promise(r => setTimeout(r, 300));
+  } else if(step.action === 'open-modal-prestamo'){
+    clearPrestamoForm();
+    _origOpenModal('modal-prestamo');
+    await new Promise(r => setTimeout(r, 350));
+  } else if(step.action === 'close-modal-prestamo'){
+    // handled in next-btn
   }
 
   const target = document.querySelector(step.selector);
@@ -1861,8 +1897,9 @@ function positionTutorialTooltip(target, position){
 
 function endTutorial(){
   tutorialActive = false;
-  // Close modal-add if it was opened during tutorial
+  // Close modals if opened during tutorial
   document.getElementById('modal-add')?.classList.remove('open');
+  document.getElementById('modal-prestamo')?.classList.remove('open');
   document.getElementById('tutorial-overlay').style.display = 'none';
   localStorage.removeItem('monify_show_tutorial');
   localStorage.setItem('monify_tutorial_done','1');
@@ -1876,9 +1913,19 @@ function endTutorial(){
 
 document.getElementById('tutorial-next-btn').addEventListener('click', async ()=>{
   const prevStep = TUTORIAL_STEPS[tutorialStep];
-  // If leaving the last modal sub-step, close the modal first
-  if(prevStep?.action === 'close-modal-add'){
+  const nextStep = TUTORIAL_STEPS[tutorialStep + 1];
+  // Close modal-add when leaving destino step
+  if(prevStep?.action === 'show-destino-then-close' || prevStep?.action === 'close-modal-add'){
     document.getElementById('modal-add')?.classList.remove('open');
+    // Reset type back to gasto
+    currentType = 'gasto'; currentDestino = 'ahorro';
+    document.getElementById('destino-wrap').style.display = 'none';
+    renderTypeToggle();
+    await new Promise(r => setTimeout(r, 300));
+  }
+  // Close modal-prestamo when leaving last prestamo modal step
+  if(prevStep?.action === 'close-modal-prestamo'){
+    document.getElementById('modal-prestamo')?.classList.remove('open');
     await new Promise(r => setTimeout(r, 300));
   }
   tutorialStep++;
