@@ -57,6 +57,15 @@ let prestamos = [];
 let currentPrestamoId = null;
 let editingMovId = null;
 
+window.togglePass = (inputId, btnId) => {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if(!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈' : '👁️';
+};
+
 const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtDate = s => { const [y,mo,d]=s.split('-'); const ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return `${parseInt(d)} ${ms[parseInt(mo)-1]}`; };
 const today = () => {
@@ -187,7 +196,7 @@ window.registerEmail = async () => {
     switchAuthMode('login');
     const b=document.getElementById('verify-banner');
     b.style.display='block';
-    b.textContent='✅ ¡Cuenta creada! Revisa tu correo y confírmalo para poder entrar.';
+    b.textContent='✅ ¡Cuenta creada! Revisa tu correo y confírmalo para poder entrar. Si no lo ves, revisa tu carpeta de spam.';
   } catch(e) {
     showToast(e.code==='auth/email-already-in-use'?'Ya existe una cuenta con ese correo':'Error: '+e.message);
   }
