@@ -166,7 +166,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .confirm-sub{font-size:13px;color:var(--text3);margin-top:6px;}
 
 /* TOGGLES */
-.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
 .type-btn{padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-family:var(--font);font-size:14px;cursor:pointer;transition:all 0.15s;text-align:center;}
 .type-btn.active-gasto{border-color:var(--pink2);background:rgba(158,80,112,0.15);color:var(--pink);}
 .type-btn.active-ingreso{border-color:var(--green2);background:rgba(61,122,90,0.15);color:var(--green);}
