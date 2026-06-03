@@ -490,8 +490,8 @@ window.saveMovimiento = async () => {
       });
       closeModal('modal-add');
       if(type==='gasto') showToast('💸 Gasto registrado');
-      else if(type==='ahorro-transfer') showToast('🌱 Movido al ahorro');
-      else if(destino==='ahorro') showToast('🌱 Extra guardado en tu ahorro');
+      else if(type==='ahorro-transfer') showToast('💰 Movido al ahorro');
+      else if(destino==='ahorro') showToast('💰 Extra guardado en tu ahorro');
       else showToast('💲 Extra sumado a tu disponible');
     }
   } catch(e){showToast('Error al guardar');}
@@ -502,7 +502,7 @@ window.showDetail = id => {
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
   const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
   const isAhorroTransfer=m.type==='ahorro-transfer';
-  const emoji=isAhorroTransfer?'🌱':isAhorro?'🌱':(m.type==='ingreso'&&m.destino==='disponible')?'💲':cat.emoji;
+  const emoji=isAhorroTransfer?'💰':isAhorro?'💰':(m.type==='ingreso'&&m.destino==='disponible')?'💲':cat.emoji;
   const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':(m.type==='ingreso'&&m.destino==='disponible')?'Extra':cat.label;
   const color=isAhorroTransfer?'var(--teal)':m.type==='gasto'?'var(--red)':isAhorro?'var(--teal)':'var(--green)';
   const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
@@ -512,8 +512,8 @@ window.showDetail = id => {
       <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
       <div style="font-size:32px;font-weight:600;color:${color}">${sign}${fmt(m.monto)}</div>
       <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
-      ${isAhorroTransfer?`<div style="font-size:12px;margin-top:4px;color:var(--teal)">🌱 Movido de disponible al ahorro</div>`:''}
-      ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💲 Fue al disponible'}</div>`:''}
+      ${isAhorroTransfer?`<div style="font-size:12px;margin-top:4px;color:var(--teal)">💰 Movido de disponible al ahorro</div>`:''}
+      ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'💰 Fue al ahorro':'💲 Fue al disponible'}</div>`:''}
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
@@ -587,7 +587,7 @@ function renderMovimientos(){
       const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
       const isDisp=m.type==='ingreso'&&m.destino==='disponible';
       const isAhorroTransfer=m.type==='ahorro-transfer';
-      const emoji=isAhorroTransfer?'🌱':isAhorro?'🌱':isDisp?'💲':cat.emoji;
+      const emoji=isAhorroTransfer?'💰':isAhorro?'💰':isDisp?'💲':cat.emoji;
       const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':isDisp?'Extra':cat.label;
       const amtClass=isAhorroTransfer?'ingreso-ahorro':m.type==='gasto'?'':isAhorro?'ingreso-ahorro':'ingreso-disp';
       const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
@@ -677,7 +677,7 @@ function renderAhorro(){
     ? ahorroMovs.map(m=>{
         const isTransfer=m.type==='ahorro-transfer';
         const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
-        const emoji=isTransfer?'🌱':'🌱';
+        const emoji=isTransfer?'💰':'💰';
         const label=isTransfer?'Al ahorro':'Ahorro';
         return `<div class="gasto-item" onclick="showAhorroDetail('${m.id}')">
           <div class="gasto-icon">${emoji}</div>
@@ -688,7 +688,7 @@ function renderAhorro(){
           <div class="gasto-amount ingreso-ahorro">+${fmt(m.monto)}</div>
         </div>`;
       }).join('')
-    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Aún no tienes ahorros registrados 🌱</div>';
+    : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">Aún no tienes ahorros registrados 💰</div>';
 
   content.innerHTML=`
     <div class="ahorro-saved-card">
@@ -705,7 +705,7 @@ window.showAhorroDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   const isTransfer=m.type==='ahorro-transfer';
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
-  const emoji=isTransfer?'🌱':'🌱';
+  const emoji=isTransfer?'💰':'💰';
   const label=isTransfer?'Al ahorro':'Ahorro';
   document.getElementById('detail-title').textContent=m.desc||label;
   document.getElementById('detail-content').innerHTML=`
@@ -713,7 +713,7 @@ window.showAhorroDetail = id => {
       <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
       <div style="font-size:32px;font-weight:600;color:var(--teal)">+${fmt(m.monto)}</div>
       <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
-      <div style="font-size:12px;margin-top:4px;color:var(--teal)">${isTransfer?'🌱 Movido de disponible al ahorro':'🌱 Fue al ahorro'}</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--teal)">${isTransfer?'💰 Movido de disponible al ahorro':'💰 Fue al ahorro'}</div>
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
@@ -1058,6 +1058,10 @@ function renderCatGrid(){
 
 // CAMBIO: al ahorro también muestra categorías; solo se ocultan si… nada, siempre visibles
 window.setType=t=>{
+  if(t === 'ahorro-transfer' && userConfig?.sections?.ahorro === false){
+    showToast('💰 Activa la sección Ahorro en ⚙️ Config. para usarla');
+    return;
+  }
   currentType=t;renderTypeToggle();
   const isIngreso=t==='ingreso';
   const isAhorroTransfer=t==='ahorro-transfer';
@@ -1618,10 +1622,24 @@ window.startAddAccount=()=>{
 
 // ── CONFIGURACIÓN DE SECCIONES (desde settings ya guardado) ──
 // Override del switch en settings: avisar si hay datos activos
-function checkSectionDisable(section,isChecked){
+async function checkSectionDisable(section,isChecked){
   if(isChecked) return; // activando, sin problema
   if(section==='ahorro'){
-    const hasAhorro=movimientos.some(m=>m.type==='ingreso'&&m.destino==='ahorro');
+    // Check across ALL quincenas in Firestore, not just current period
+    let hasAhorro = movimientos.some(m=>(m.type==='ingreso'&&m.destino==='ahorro')||m.type==='ahorro-transfer');
+    if(!hasAhorro && currentUser){
+      try {
+        const snap = await getDocs(query(
+          collection(db,'movimientos'),
+          where('uid','==',currentUser.uid),
+          where('type','in',['ahorro-transfer','ingreso'])
+        ));
+        hasAhorro = snap.docs.some(d=>{
+          const m=d.data();
+          return m.type==='ahorro-transfer'||(m.type==='ingreso'&&m.destino==='ahorro');
+        });
+      } catch(e){}
+    }
     if(hasAhorro) showToast('⚠️ Tienes ahorros registrados. Se guardarán pero la sección se ocultará.');
   }
   if(section==='prestamos'){
@@ -1777,17 +1795,35 @@ window.addEventListener('resize', ()=>{ if(tutorialActive) renderTutorialStep();
 function updateAhorroBtn(){
   const ahorroEnabled = userConfig?.sections?.ahorro !== false;
   const btnAhorro = document.getElementById('dest-ahorro');
-  if(!btnAhorro) return;
-  if(ahorroEnabled){
-    btnAhorro.classList.remove('disabled-section');
-    btnAhorro.title = '';
-  } else {
-    btnAhorro.classList.add('disabled-section');
-    btnAhorro.title = 'Activa la sección Ahorro en Configuración para usarla';
-    // if currently set to ahorro, switch to disponible
-    if(currentDestino === 'ahorro'){
-      currentDestino = 'disponible';
-      renderDestinoToggle();
+  if(btnAhorro){
+    if(ahorroEnabled){
+      btnAhorro.classList.remove('disabled-section');
+      btnAhorro.title = '';
+    } else {
+      btnAhorro.classList.add('disabled-section');
+      btnAhorro.title = 'Activa la sección Ahorro en Configuración para usarla';
+      if(currentDestino === 'ahorro'){
+        currentDestino = 'disponible';
+        renderDestinoToggle();
+      }
+    }
+  }
+  // Also block the "Ahorro" type button (ahorro-transfer)
+  const btnTypeAhorro = document.getElementById('type-ahorro-transfer');
+  if(btnTypeAhorro){
+    if(ahorroEnabled){
+      btnTypeAhorro.classList.remove('disabled-section');
+      btnTypeAhorro.title = '';
+    } else {
+      btnTypeAhorro.classList.add('disabled-section');
+      btnTypeAhorro.title = 'Activa la sección Ahorro en Configuración para usarla';
+      if(currentType === 'ahorro-transfer'){
+        currentType = 'gasto';
+        renderTypeToggle();
+        document.getElementById('destino-wrap').style.display='none';
+        document.getElementById('ahorro-transfer-hint').style.display='none';
+        document.getElementById('cat-wrap').style.display='block';
+      }
     }
   }
 }
@@ -1796,7 +1832,7 @@ function updateAhorroBtn(){
 const _origSetDestino = window.setDestino;
 window.setDestino = d => {
   if(d === 'ahorro' && userConfig?.sections?.ahorro === false){
-    showToast('🌱 Activa la sección Ahorro en ⚙️ Config. para usarla');
+    showToast('💰 Activa la sección Ahorro en ⚙️ Config. para usarla');
     return;
   }
   _origSetDestino(d);
@@ -1817,7 +1853,7 @@ fabBtn.addEventListener('click', ()=>{ setTimeout(updateAhorroBtn, 60); }, true)
 
 // ── SECTION TUTORIALS ────────────────────────────────
 const TUTORIAL_AHORRO = [
-  { selector: '.ahorro-saved-card', text: '🌱 Aquí ves el total ahorrado en esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
+  { selector: '.ahorro-saved-card', text: '💰 Aquí ves el total ahorrado en esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
   { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón, selecciona "Extra" y elige "Al ahorro".', position: 'top' }
 ];
 const TUTORIAL_PRESTAMOS = [
