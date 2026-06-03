@@ -490,9 +490,9 @@ window.saveMovimiento = async () => {
       });
       closeModal('modal-add');
       if(type==='gasto') showToast('💸 Gasto registrado');
-      else if(type==='ahorro-transfer') showToast('💲 Movido al ahorro');
+      else if(type==='ahorro-transfer') showToast('🌱 Movido al ahorro');
       else if(destino==='ahorro') showToast('🌱 Extra guardado en tu ahorro');
-      else showToast('💰 Extra sumado a tu disponible');
+      else showToast('💲 Extra sumado a tu disponible');
     }
   } catch(e){showToast('Error al guardar');}
 };
@@ -502,7 +502,7 @@ window.showDetail = id => {
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
   const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
   const isAhorroTransfer=m.type==='ahorro-transfer';
-  const emoji=isAhorroTransfer?'💲':isAhorro?'🌱':(m.type==='ingreso'&&m.destino==='disponible')?'💰':cat.emoji;
+  const emoji=isAhorroTransfer?'🌱':isAhorro?'🌱':(m.type==='ingreso'&&m.destino==='disponible')?'💲':cat.emoji;
   const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':(m.type==='ingreso'&&m.destino==='disponible')?'Extra':cat.label;
   const color=isAhorroTransfer?'var(--teal)':m.type==='gasto'?'var(--red)':isAhorro?'var(--teal)':'var(--green)';
   const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
@@ -512,8 +512,8 @@ window.showDetail = id => {
       <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
       <div style="font-size:32px;font-weight:600;color:${color}">${sign}${fmt(m.monto)}</div>
       <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
-      ${isAhorroTransfer?`<div style="font-size:12px;margin-top:4px;color:var(--teal)">💲 Movido de disponible al ahorro</div>`:''}
-      ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💰 Fue al disponible'}</div>`:''}
+      ${isAhorroTransfer?`<div style="font-size:12px;margin-top:4px;color:var(--teal)">🌱 Movido de disponible al ahorro</div>`:''}
+      ${m.type==='ingreso'?`<div style="font-size:12px;margin-top:4px;color:${isAhorro?'var(--teal)':'var(--green)'}">${isAhorro?'🌱 Fue al ahorro':'💲 Fue al disponible'}</div>`:''}
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
@@ -587,7 +587,7 @@ function renderMovimientos(){
       const isAhorro=m.type==='ingreso'&&m.destino==='ahorro';
       const isDisp=m.type==='ingreso'&&m.destino==='disponible';
       const isAhorroTransfer=m.type==='ahorro-transfer';
-      const emoji=isAhorroTransfer?'💲':isAhorro?'🌱':isDisp?'💰':cat.emoji;
+      const emoji=isAhorroTransfer?'🌱':isAhorro?'🌱':isDisp?'💲':cat.emoji;
       const label=isAhorroTransfer?'Al ahorro':isAhorro?'Ahorro':isDisp?'Extra':cat.label;
       const amtClass=isAhorroTransfer?'ingreso-ahorro':m.type==='gasto'?'':isAhorro?'ingreso-ahorro':'ingreso-disp';
       const sign=(m.type==='gasto'||isAhorroTransfer)?'-':'+';
@@ -677,7 +677,7 @@ function renderAhorro(){
     ? ahorroMovs.map(m=>{
         const isTransfer=m.type==='ahorro-transfer';
         const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
-        const emoji=isTransfer?'💲':'🌱';
+        const emoji=isTransfer?'🌱':'🌱';
         const label=isTransfer?'Al ahorro':'Ahorro';
         return `<div class="gasto-item" onclick="showAhorroDetail('${m.id}')">
           <div class="gasto-icon">${emoji}</div>
@@ -705,7 +705,7 @@ window.showAhorroDetail = id => {
   const m=movimientos.find(x=>x.id===id); if(!m)return;
   const isTransfer=m.type==='ahorro-transfer';
   const cat=CATS.find(c=>c.id===m.cat)||CAT_OTRO;
-  const emoji=isTransfer?'💲':'🌱';
+  const emoji=isTransfer?'🌱':'🌱';
   const label=isTransfer?'Al ahorro':'Ahorro';
   document.getElementById('detail-title').textContent=m.desc||label;
   document.getElementById('detail-content').innerHTML=`
@@ -713,7 +713,7 @@ window.showAhorroDetail = id => {
       <div style="font-size:48px;margin-bottom:8px">${emoji}</div>
       <div style="font-size:32px;font-weight:600;color:var(--teal)">+${fmt(m.monto)}</div>
       <div style="font-size:13px;color:var(--text3);margin-top:6px">${label} · ${fmtDate(m.fecha)}</div>
-      <div style="font-size:12px;margin-top:4px;color:var(--teal)">${isTransfer?'💲 Movido de disponible al ahorro':'🌱 Fue al ahorro'}</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--teal)">${isTransfer?'🌱 Movido de disponible al ahorro':'🌱 Fue al ahorro'}</div>
       ${m.desc?`<div style="font-size:14px;color:var(--text2);margin-top:8px">${m.desc}</div>`:''}
     </div>`;
   document.getElementById('detail-delete-btn').onclick=()=>{
