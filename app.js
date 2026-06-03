@@ -1640,11 +1640,11 @@ async function checkSectionDisable(section,isChecked){
         });
       } catch(e){}
     }
-    if(hasAhorro) showToast('⚠️ Tienes ahorros registrados en esta u otra quincena. Se guardarán y se ocultará la sección.');
+    if(hasAhorro) showToast('⚠️ Tienes ahorros registrados en esta u otra quincena. Se guardarán y se ocultará la sección.', 4500);
   }
   if(section==='prestamos'){
     const hasActive=prestamos.some(p=>p.status==='activo');
-    if(hasActive) showToast('⚠️ Tienes préstamos activos en esta u otra quincena. Se guardarán y se ocultará la sección.');
+    if(hasActive) showToast('⚠️ Tienes préstamos activos en esta u otra quincena. Se guardarán y se ocultará la sección.', 4500);
   }
 }
 
@@ -1659,7 +1659,7 @@ renderCatGrid();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
 // ── TUTORIAL ──────────────────────────────────────────
-const TUTORIAL_STEPS = [
+const TUTORIAL_STEPS_BASE = [
   {
     selector: '.balance-card',
     text: '💰 Aquí ves tu resumen financiero: saldo inicial, lo disponible, cuánto has gastado y cuánto has ahorrado en esta quincena.',
@@ -1677,9 +1677,12 @@ const TUTORIAL_STEPS = [
   },
   {
     selector: '.fab',
-    text: '➕ Este botón es para agregar un movimiento (gasto o ingreso extra). ¡Úsalo cada vez que gastes algo!',
-    position: 'top'
+    text: '➕ Este botón es para agregar un movimiento. ¡Toca Siguiente para ver cómo funciona!',
+    position: 'top',
+    action: 'open-modal-add'
   },
+  // Steps 4–6 are the modal sub-steps (injected dynamically at runtime)
+  // Step: avatar
   {
     selector: '.avatar-btn',
     text: '👤 Tu perfil: cambia tu nombre, gestiona cuentas o ajusta la configuración de secciones.',
@@ -1687,20 +1690,91 @@ const TUTORIAL_STEPS = [
   }
 ];
 
+// Modal sub-steps (inserted after FAB step)
+const TUTORIAL_MODAL_STEPS = [
+  {
+    selector: '#type-gasto',
+    text: '🛍️ "Gasto" para registrar cualquier cosa que gastes: comida, transporte, servicios...',
+    position: 'bottom',
+    modalOpen: true
+  },
+  {
+    selector: '#type-ahorro-transfer',
+    text: '💰 "Ahorro" para mover dinero de tu disponible a tu ahorro personal.',
+    position: 'bottom',
+    modalOpen: true
+  },
+  {
+    selector: '#type-ingreso',
+    text: '💲 "Extra" para registrar ingresos adicionales: bonos, regalos, ventas...',
+    position: 'bottom',
+    modalOpen: true,
+    action: 'close-modal-add'
+  }
+];
+
+// Section steps (appended if sections active from setup)
+const TUTORIAL_AHORRO_STEPS = [
+  { selector: '.nav-tab[data-tab="ahorro"]', text: '💰 Esta es la pestaña de Ahorro. Aquí verás el total que has guardado en la quincena.', position: 'bottom', action: 'switch-tab-ahorro' },
+  { selector: '.ahorro-saved-card', text: '💰 Aquí ves el total ahorrado esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
+  { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón, selecciona "Ahorro" y listo.', position: 'top' }
+];
+const TUTORIAL_PRESTAMOS_STEPS = [
+  { selector: '.nav-tab[data-tab="prestamos"]', text: '🤝 Esta es la pestaña de Préstamos. Registra y controla lo que prestas.', position: 'bottom', action: 'switch-tab-prestamos' },
+  { selector: '.fab', text: '➕ Toca aquí para registrar un nuevo préstamo. Puedes poner interés, fecha y notas.', position: 'top' }
+];
+
+let TUTORIAL_STEPS = [...TUTORIAL_STEPS_BASE];
 let tutorialStep = 0;
 let tutorialActive = false;
 let tutorialAnimFrame = null;
 
+function buildTutorialSteps(){
+  // Base: balance, quincena, nav, fab
+  const base = TUTORIAL_STEPS_BASE.slice(0, 4); // up to FAB
+  const modalSteps = TUTORIAL_MODAL_STEPS;
+  const avatar = TUTORIAL_STEPS_BASE[4];
+  let steps = [...base, ...modalSteps];
+  // Append section steps if active from setup
+  if(userConfig?.sections?.ahorro !== false){
+    steps = steps.concat(TUTORIAL_AHORRO_STEPS);
+  }
+  if(userConfig?.sections?.prestamos !== false){
+    steps = steps.concat(TUTORIAL_PRESTAMOS_STEPS);
+  }
+  steps.push(avatar);
+  TUTORIAL_STEPS = steps;
+}
+
 function startTutorial(){
+  buildTutorialSteps();
   tutorialStep = 0;
   tutorialActive = true;
   document.getElementById('tutorial-overlay').style.display = 'block';
   renderTutorialStep();
 }
 
-function renderTutorialStep(){
+async function renderTutorialStep(){
   if(tutorialStep >= TUTORIAL_STEPS.length){ endTutorial(); return; }
   const step = TUTORIAL_STEPS[tutorialStep];
+
+  // Handle actions before rendering
+  if(step.action === 'open-modal-add'){
+    // open the add modal
+    _origOpenModal('modal-add');
+    await new Promise(r => setTimeout(r, 350));
+  } else if(step.action === 'close-modal-add'){
+    // will close after user clicks next; handled in next-btn handler
+  } else if(step.action === 'switch-tab-ahorro'){
+    currentTab = 'ahorro';
+    render();
+    await new Promise(r => setTimeout(r, 300));
+  } else if(step.action === 'switch-tab-prestamos'){
+    currentTab = 'prestamos';
+    render();
+    await new Promise(r => setTimeout(r, 300));
+  }
+
   const target = document.querySelector(step.selector);
   const badge = document.getElementById('tutorial-step-badge');
   const text = document.getElementById('tutorial-text');
@@ -1777,12 +1851,26 @@ function positionTutorialTooltip(target, position){
 
 function endTutorial(){
   tutorialActive = false;
+  // Close modal-add if it was opened during tutorial
+  document.getElementById('modal-add')?.classList.remove('open');
   document.getElementById('tutorial-overlay').style.display = 'none';
   localStorage.removeItem('monify_show_tutorial');
   localStorage.setItem('monify_tutorial_done','1');
+  // Mark section tutorials as done if they were included
+  if(userConfig?.sections?.ahorro !== false) localStorage.setItem('monify_tutorial_ahorro','1');
+  if(userConfig?.sections?.prestamos !== false) localStorage.setItem('monify_tutorial_prestamos','1');
+  // Return to movimientos tab
+  currentTab = 'movimientos';
+  render();
 }
 
-document.getElementById('tutorial-next-btn').addEventListener('click', ()=>{
+document.getElementById('tutorial-next-btn').addEventListener('click', async ()=>{
+  const prevStep = TUTORIAL_STEPS[tutorialStep];
+  // If leaving the last modal sub-step, close the modal first
+  if(prevStep?.action === 'close-modal-add'){
+    document.getElementById('modal-add')?.classList.remove('open');
+    await new Promise(r => setTimeout(r, 300));
+  }
   tutorialStep++;
   renderTutorialStep();
 });
@@ -1852,14 +1940,9 @@ fabBtn.addEventListener('click', ()=>{ setTimeout(updateAhorroBtn, 60); }, true)
 
 
 // ── SECTION TUTORIALS ────────────────────────────────
-const TUTORIAL_AHORRO = [
-  { selector: '.ahorro-saved-card', text: '💰 Aquí ves el total ahorrado en esta quincena. Cada depósito al ahorro se suma aquí.', position: 'bottom' },
-  { selector: '.fab', text: '➕ Para guardar ahorro, toca este botón, selecciona "Extra" y elige "Al ahorro".', position: 'top' }
-];
-const TUTORIAL_PRESTAMOS = [
-  { selector: '.prestamos-summary', text: '🤝 Aquí ves el resumen de todos tus préstamos activos: capital, ganancia y cobro quincenal.', position: 'bottom' },
-  { selector: '.fab', text: '➕ Toca aquí para registrar un nuevo préstamo. Puedes poner interés, fecha y notas.', position: 'top' }
-];
+// TUTORIAL_AHORRO and TUTORIAL_PRESTAMOS now defined above as TUTORIAL_AHORRO_STEPS / TUTORIAL_PRESTAMOS_STEPS
+const TUTORIAL_AHORRO = TUTORIAL_AHORRO_STEPS;
+const TUTORIAL_PRESTAMOS = TUTORIAL_PRESTAMOS_STEPS;
 
 function startSectionTutorial(section){
   const steps = section==='ahorro' ? TUTORIAL_AHORRO : TUTORIAL_PRESTAMOS;
