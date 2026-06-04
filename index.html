@@ -22,6 +22,10 @@
 .settings-nav-sub{font-size:12px;color:var(--text3);margin-top:2px;}
 .settings-nav-arrow{font-size:24px;color:var(--text3);line-height:1;}
 #modal-settings .modal{position:relative;overflow:hidden;}
+#modal-edit-perfil{z-index:1100;}
+#modal-delete-account{z-index:1100;}
+#modal-confirm{z-index:1100;}
+#modal-edit-cat{z-index:1100;}
 .settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
 .settings-subpanel.open{transform:translateX(0);}
 .settings-subpanel-header{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -213,7 +217,7 @@
     <div class="modal-handle"></div>
     <div class="modal-title">Cuentas</div>
     <div id="accounts-list"></div>
-    <button class="btn-save" id="add-account-btn" onclick="startAddAccount()">＋ Agregar cuenta</button>
+    <button class="btn-save" id="add-account-btn" onclick="openModal('modal-add-account-warn')">＋ Agregar cuenta</button>
     <button class="btn-secondary" onclick="closeModal('modal-accounts');setTimeout(()=>openModal('modal-perfil'),300)">Cerrar</button>
   </div>
 </div>
@@ -540,9 +544,9 @@
     <div class="settings-subpanel-body">
       <!-- Perfil: avatar + nombre + correo (solo display) -->
       <div class="profile-header" style="padding-bottom:12px;">
-        <div class="profile-avatar" id="perfil-avatar">?</div>
-        <div class="profile-name" id="perfil-name">--</div>
-        <div class="profile-email-txt" id="perfil-email">--</div>
+        <div class="profile-avatar" id="settings-perfil-avatar">?</div>
+        <div class="profile-name" id="settings-perfil-name">--</div>
+        <div class="profile-email-txt" id="settings-perfil-email">--</div>
       </div>
       <!-- Stats -->
       <div id="perfil-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
@@ -556,7 +560,12 @@
           <div style="font-size:15px;font-weight:700;color:var(--teal)" id="stat-disponible">--</div>
           <div style="font-size:10px;color:var(--text3)">última quincena</div>
         </div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;grid-column:1/-1;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">AHORRO</div>
+          <div style="font-size:15px;font-weight:700;color:var(--green)" id="stat-ahorro">--</div>
+          <div style="font-size:10px;color:var(--text3)">última quincena</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">PRÉSTAMOS ACTIVOS</div>
           <div style="font-size:20px;font-weight:700;color:var(--green)" id="stat-prestamos">--</div>
         </div>
@@ -638,6 +647,20 @@
       <button id="tutorial-skip-btn" style="flex:1;background:transparent;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);">Omitir</button>
       <button id="tutorial-next-btn" style="flex:2;background:var(--grad2);border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;color:white;cursor:pointer;font-family:var(--font);">Siguiente →</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL ADVERTENCIA AGREGAR CUENTA -->
+<div class="modal-overlay centered" id="modal-add-account-warn" style="z-index:1100;">
+  <div class="modal" style="max-width:320px;">
+    <div style="text-align:center;font-size:36px;margin:8px 0;">ℹ️</div>
+    <div class="modal-title" style="text-align:center;">Agregar cuenta</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:16px;">
+      Para agregar una segunda cuenta, esta ya debe estar <strong style="color:var(--text);">registrada y verificada</strong> en MoniFy.<br><br>
+      Si aún no tienes otra cuenta, cierra esto y crea una primero desde la pantalla de inicio de sesión.
+    </div>
+    <button class="btn-save" onclick="closeModal('modal-add-account-warn');setTimeout(startAddAccount,300);">Sí, ya tengo otra cuenta</button>
+    <button class="btn-secondary" onclick="closeModal('modal-add-account-warn');setTimeout(()=>openModal('modal-accounts'),300);">Cancelar</button>
   </div>
 </div>
 
