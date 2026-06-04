@@ -215,6 +215,38 @@
   </div>
 </div>
 
+<!-- MODAL CAMBIAR CUENTA -->
+<div class="modal-overlay" id="modal-switch-account">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cambiar de cuenta</div>
+    <div id="switch-account-info" style="font-size:13px;color:var(--text3);margin-bottom:16px;text-align:center;line-height:1.5;"></div>
+    <div class="form-group">
+      <label class="form-label">CORREO</label>
+      <input class="form-input" type="email" id="switch-account-email" readonly style="opacity:0.6;cursor:default;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CONTRASEÑA</label>
+      <div style="position:relative;">
+        <input class="form-input" type="password" id="switch-account-pass" placeholder="••••••••" style="padding-right:42px;">
+        <button type="button" onclick="togglePass('switch-account-pass','eye-switch')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-switch"><span class="material-icons" style="font-size:20px;">visibility</span></button>
+      </div>
+    </div>
+    <div id="switch-account-error" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none;"></div>
+    <button class="btn-primary" onclick="confirmSwitchAccount()">Cambiar de cuenta</button>
+    <button class="btn-secondary" onclick="cancelSwitchAccount()">Cancelar</button>
+  </div>
+</div>
+
+<!-- SPLASH OVERLAY GLOBAL (cambio de cuenta, etc.) -->
+<div id="global-splash-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <img src="splash.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:80px;width:100%;height:100%;">
+    <div class="loader-spinner" style="margin-bottom:14px;"></div>
+    <div id="global-splash-msg" style="font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:0.3px;">Cambiando de cuenta...</div>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div id="app-main" style="display:none;flex-direction:column;height:100dvh;">
   <div class="header">
