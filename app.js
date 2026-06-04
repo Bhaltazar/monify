@@ -1572,13 +1572,14 @@ window.saveProfileFromSettings=async()=>{
     const ind=document.getElementById('save-indicator-settings');
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
     showToast('Perfil actualizado ✅');
+    // Cerrar overlay de edición tras guardar
+    setTimeout(()=>window.closeMiCuentaEdit(), 800);
   } catch(e){ showToast('Error al guardar perfil'); }
 };
 
 window.confirmDeleteAccount=()=>{
-  // Desde settings: cerrar settings y abrir modal-delete-account
-  closeModal('modal-settings');
-  setTimeout(()=>{ openModal('modal-delete-account'); }, 350);
+  // Abrir overlay de eliminar dentro del subpanel Mi cuenta
+  window.openDeleteAccountModal();
 };
 
 async function deleteAccountPermanently(){
@@ -1611,7 +1612,7 @@ async function deleteAccountPermanently(){
     if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
     try { await currentUser.delete(); } catch(e){ await signOut(auth); }
     splash.style.display = 'none';
-    closeModal('modal-delete-account');
+    window.closeMiCuentaDelete();
     closeModal('modal-perfil');
     showToast('✅ Cuenta eliminada permanentemente');
   } catch(e){
@@ -1684,29 +1685,28 @@ function updatePerfilStats(){
 }
 
 window.openEditPerfilModal=()=>{
-  const u = document.getElementById('edit-perfil-username');
-  const e = document.getElementById('edit-perfil-email');
+  const u = document.getElementById('settings-username-input');
+  const e = document.getElementById('settings-email-input');
   if(u) u.value = currentUser?.displayName || '';
   if(e) e.value = currentUser?.email || '';
-  document.getElementById('save-indicator-perfil').style.opacity='0';
-  openModal('modal-edit-perfil');
+  document.getElementById('save-indicator-settings').style.opacity='0';
+  const ov = document.getElementById('mi-cuenta-edit-overlay');
+  if(ov){ ov.style.display='flex'; ov.style.flexDirection='column'; }
 };
 
-window.saveEditPerfil=async()=>{
-  const newName = document.getElementById('edit-perfil-username').value.trim();
-  if(!newName){ showToast('El nombre no puede estar vacío'); return; }
-  try {
-    await updateProfile(currentUser,{displayName:newName});
-    await updateDoc(doc(db,'users',currentUser.uid),{username:newName});
-    setUserUI(newName, currentUser.email);
-    const ind = document.getElementById('save-indicator-perfil');
-    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
-    showToast('Perfil actualizado ✅');
-  } catch(e){ showToast('Error al guardar perfil'); }
+window.closeMiCuentaEdit=()=>{
+  const ov = document.getElementById('mi-cuenta-edit-overlay');
+  if(ov) ov.style.display='none';
 };
 
 window.openDeleteAccountModal=()=>{
-  openModal('modal-delete-account');
+  const ov = document.getElementById('mi-cuenta-delete-overlay');
+  if(ov){ ov.style.display='flex'; }
+};
+
+window.closeMiCuentaDelete=()=>{
+  const ov = document.getElementById('mi-cuenta-delete-overlay');
+  if(ov) ov.style.display='none';
 };
 
 function renderAccountsList(){
