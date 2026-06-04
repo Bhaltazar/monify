@@ -268,6 +268,10 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('app-main').style.display='none';
     document.getElementById('setup-screen').style.display='none';
     document.getElementById('auth-screen').style.display='flex';
+    // Solo mostrar Volver si venimos de agregar cuenta
+    if(!window._addAccountPrevEmail){
+      document.getElementById('auth-back-btn').style.display='none';
+    }
   }
 });
 
@@ -1584,8 +1588,6 @@ window.saveProfileFromSettings=async()=>{
     const ind=document.getElementById('save-indicator-settings');
     if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
     showToast('Perfil actualizado ✅');
-    // Cerrar overlay de edición tras guardar
-    setTimeout(()=>window.closeMiCuentaEdit(), 800);
   } catch(e){ showToast('Error al guardar perfil'); }
 };
 
@@ -1624,7 +1626,7 @@ async function deleteAccountPermanently(){
     if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
     try { await currentUser.delete(); } catch(e){ await signOut(auth); }
     splash.style.display = 'none';
-    window.closeMiCuentaDelete();
+    closeModal('modal-delete-account');
     closeModal('modal-perfil');
     showToast('✅ Cuenta eliminada permanentemente');
   } catch(e){
@@ -1697,28 +1699,35 @@ function updatePerfilStats(){
 }
 
 window.openEditPerfilModal=()=>{
-  const u = document.getElementById('settings-username-input');
-  const e = document.getElementById('settings-email-input');
+  const u = document.getElementById('edit-perfil-username');
+  const e = document.getElementById('edit-perfil-email');
   if(u) u.value = currentUser?.displayName || '';
   if(e) e.value = currentUser?.email || '';
-  document.getElementById('save-indicator-settings').style.opacity='0';
-  const ov = document.getElementById('mi-cuenta-edit-overlay');
-  if(ov){ ov.style.display='flex'; ov.style.flexDirection='column'; }
+  const ind = document.getElementById('save-indicator-perfil');
+  if(ind) ind.style.opacity='0';
+  openModal('modal-edit-perfil');
 };
 
-window.closeMiCuentaEdit=()=>{
-  const ov = document.getElementById('mi-cuenta-edit-overlay');
-  if(ov) ov.style.display='none';
+window.saveEditPerfil=async()=>{
+  const newName = document.getElementById('edit-perfil-username').value.trim();
+  if(!newName){ showToast('El nombre no puede estar vacío'); return; }
+  try {
+    await updateProfile(currentUser,{displayName:newName});
+    await updateDoc(doc(db,'users',currentUser.uid),{username:newName});
+    setUserUI(newName, currentUser.email);
+    const ind = document.getElementById('save-indicator-perfil');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
+    showToast('Perfil actualizado ✅');
+    setTimeout(()=>closeModal('modal-edit-perfil'), 800);
+  } catch(e){ showToast('Error al guardar perfil'); }
 };
 
 window.openDeleteAccountModal=()=>{
-  const ov = document.getElementById('mi-cuenta-delete-overlay');
-  if(ov){ ov.style.display='flex'; }
+  openModal('modal-delete-account');
 };
 
-window.closeMiCuentaDelete=()=>{
-  const ov = document.getElementById('mi-cuenta-delete-overlay');
-  if(ov) ov.style.display='none';
+window.confirmDeleteAccount=()=>{
+  openModal('modal-delete-account');
 };
 
 function renderAccountsList(){
@@ -1842,8 +1851,32 @@ window.startAddAccount=()=>{
   closeModal('modal-accounts');
   setTimeout(()=>{
     if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+    // Guardar uid actual para poder regresar
+    window._addAccountPrevUid = currentUser?.uid;
+    window._addAccountPrevEmail = currentUser?.email;
+    // Mostrar botón de volver en el form de auth
+    document.getElementById('auth-back-btn').style.display='block';
     signOut(auth).then(()=>showToast('Inicia sesión con la segunda cuenta'));
   },350);
+};
+
+window.cancelAddAccount=async()=>{
+  document.getElementById('auth-back-btn').style.display='none';
+  const prevEmail = window._addAccountPrevEmail;
+  window._addAccountPrevUid = null;
+  window._addAccountPrevEmail = null;
+  if(prevEmail){
+    // Mostrar modal de switch para que ingrese su contraseña y regrese
+    const acc = savedAccounts.find(a=>a.email===prevEmail);
+    document.getElementById('switch-account-email').value = prevEmail;
+    document.getElementById('switch-account-pass').value = '';
+    document.getElementById('switch-account-error').style.display = 'none';
+    const info = document.getElementById('switch-account-info');
+    info.textContent = acc ? 'Ingresa tu contraseña para continuar como ' + acc.displayName : 'Ingresa tu contraseña para regresar';
+    window._switchTargetEmail = prevEmail;
+    document.getElementById('auth-screen').style.display='none';
+    openModal('modal-switch-account');
+  }
 };
 
 // ── CONFIGURACIÓN DE SECCIONES (desde settings ya guardado) ──
