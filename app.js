@@ -291,11 +291,18 @@ function setUserUI(username, email){
   if(perfilEmail) perfilEmail.textContent=email;
   if(perfilUsernameInput) perfilUsernameInput.value=username;
   if(perfilEmailInput) perfilEmailInput.value=email;
-  // También llenar subpanel Mi cuenta en settings
+  // También llenar subpanel Mi cuenta en settings (IDs únicos)
   const su=document.getElementById('settings-username-input');
   const se=document.getElementById('settings-email-input');
   if(su) su.value=username;
   if(se) se.value=email;
+  // Llenar avatar/nombre/email del subpanel de settings
+  const sa=document.getElementById('settings-perfil-avatar');
+  const sn=document.getElementById('settings-perfil-name');
+  const sem=document.getElementById('settings-perfil-email');
+  if(sa) sa.textContent=initials;
+  if(sn) sn.textContent=username;
+  if(sem) sem.textContent=email;
 }
 
 window.saveProfile = async () => {
@@ -1553,10 +1560,10 @@ window.closeSettingsSections=()=>{
 window.openSettingsAccount=()=>{
   // Llenar nombre/correo display
   if(currentUser){
-    const av=document.getElementById('perfil-avatar');
-    const nm=document.getElementById('perfil-name');
-    const em=document.getElementById('perfil-email');
     const name=currentUser.displayName||currentUser.email.split('@')[0];
+    const av=document.getElementById('settings-perfil-avatar');
+    const nm=document.getElementById('settings-perfil-name');
+    const em=document.getElementById('settings-perfil-email');
     if(av) av.textContent=getInitials(name);
     if(nm) nm.textContent=name;
     if(em) em.textContent=currentUser.email;
@@ -1693,6 +1700,10 @@ function updatePerfilStats(){
   const extrasDisp = movimientos.filter(m=>m.type==='ingreso'&&m.destino==='disponible').reduce((a,m)=>a+m.monto,0);
   const disponible = q ? q.saldo - gastos - ahorroTransfers + extrasDisp : 0;
   document.getElementById('stat-disponible').textContent = fmt(disponible);
+  // Ahorro (última quincena)
+  const ahorrado = movimientos.filter(m=>(m.type==='ingreso'&&m.destino==='ahorro')||m.type==='ahorro-transfer').reduce((a,m)=>a+m.monto,0);
+  const statAhorro = document.getElementById('stat-ahorro');
+  if(statAhorro) statAhorro.textContent = fmt(ahorrado);
   // Préstamos activos
   const activosPrestamos = prestamos.filter(p=>p.status==='activo').length;
   document.getElementById('stat-prestamos').textContent = activosPrestamos;
@@ -1876,6 +1887,9 @@ window.cancelAddAccount=async()=>{
     window._switchTargetEmail = prevEmail;
     document.getElementById('auth-screen').style.display='none';
     openModal('modal-switch-account');
+  } else {
+    // Sin cuenta previa: simplemente mostrar auth screen normal
+    document.getElementById('auth-screen').style.display='flex';
   }
 };
 
