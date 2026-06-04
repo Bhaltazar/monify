@@ -1797,27 +1797,31 @@ window.confirmSwitchAccount=async()=>{
   const errEl = document.getElementById('switch-account-error');
   errEl.style.display = 'none';
   if(!pass){ errEl.textContent='Ingresa tu contraseña'; errEl.style.display='block'; return; }
+  // Mostrar splash ANTES de cualquier cambio para que no se vean pantallas intermedias
+  const splash = document.getElementById('global-splash-overlay');
+  document.getElementById('global-splash-msg').textContent = 'Cambiando de cuenta...';
+  splash.style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  closeModal('modal-switch-account');
   try {
-    // Desuscribir listeners antes de cambiar
     if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
     await signOut(auth);
     const cred = await signInWithEmailAndPassword(auth, email, pass);
     if(!cred.user.emailVerified){
       await signOut(auth);
+      splash.style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
       errEl.textContent='Este correo aún no está verificado.';
       errEl.style.display='block';
+      openModal('modal-switch-account');
       return;
     }
-    // Éxito: cerrar modal, ocultar app inmediatamente, mostrar splash y dejar que onAuthStateChanged tome el control
-    closeModal('modal-switch-account');
-    // Ocultar app de inmediato para evitar que se vea el formulario detrás
-    document.getElementById('app-main').style.display = 'none';
-    document.getElementById('auth-screen').style.display = 'none';
-    const splash = document.getElementById('global-splash-overlay');
-    document.getElementById('global-splash-msg').textContent = 'Cambiando de cuenta...';
-    splash.style.display = 'flex';
     setTimeout(()=>{ splash.style.display = 'none'; }, 2000);
   } catch(e){
+    splash.style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+    openModal('modal-switch-account');
     errEl.textContent = e.code==='auth/invalid-credential'?'Contraseña incorrecta':'Error al iniciar sesión';
     errEl.style.display = 'block';
   }
