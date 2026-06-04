@@ -210,7 +210,8 @@ window.confirmLogout = () => {
 
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
-  if(isLoggingIn && !user) return; // login en proceso, ignorar estado intermedio
+  if(isLoggingIn && !user) return; // contraseña incorrecta: Firebase no autenticó, ignorar
+  if(isLoggingIn && user) isLoggingIn = false; // login exitoso, continuar normal
   if(user && user.emailVerified){
     currentUser=user;
     const snap=await getDoc(doc(db,'users',user.uid));
@@ -1818,7 +1819,30 @@ window.confirmSwitchAccount=async()=>{
   const errEl = document.getElementById('switch-account-error');
   errEl.style.display = 'none';
   if(!pass){ errEl.textContent='Ingresa tu contraseña'; errEl.style.display='block'; return; }
-  // Mostrar splash ANTES de cualquier cambio para que no se vean pantallas intermedias
+  // Primero validar credenciales sin cerrar sesión actual
+  try {
+    // Intentar login en segundo plano para validar contraseña
+    const { getAuth: _ga, signInWithEmailAndPassword: _si } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    // No podemos hacer doble signIn con el mismo auth, así que usamos fetch a la API REST
+    const apiKey = auth.app.options.apiKey;
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pass, returnSecureToken: false})
+    });
+    if(!res.ok){
+      const data = await res.json();
+      const code = data?.error?.message;
+      errEl.textContent = (code==='INVALID_PASSWORD'||code==='EMAIL_NOT_FOUND'||code?.includes('INVALID_LOGIN_CREDENTIALS')) ? 'Contraseña incorrecta' : 'Error al iniciar sesión';
+      errEl.style.display = 'block';
+      return;
+    }
+  } catch(e){
+    errEl.textContent = 'Error al verificar contraseña';
+    errEl.style.display = 'block';
+    return;
+  }
+  // Contraseña correcta — ahora sí hacer el cambio
   const splash = document.getElementById('global-splash-overlay');
   document.getElementById('global-splash-msg').textContent = 'Cambiando de cuenta...';
   splash.style.display = 'flex';
@@ -1841,9 +1865,10 @@ window.confirmSwitchAccount=async()=>{
     setTimeout(()=>{ splash.style.display = 'none'; }, 2000);
   } catch(e){
     splash.style.display = 'none';
-    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app-main').style.display = 'flex';
+    document.getElementById('app-main').style.flexDirection = 'column';
     openModal('modal-switch-account');
-    errEl.textContent = e.code==='auth/invalid-credential'?'Contraseña incorrecta':'Error al iniciar sesión';
+    errEl.textContent = 'Error al cambiar de cuenta';
     errEl.style.display = 'block';
   }
 };
