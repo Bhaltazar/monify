@@ -1707,10 +1707,22 @@ function updatePerfilStats(){
   // Préstamos activos
   const activosPrestamos = prestamos.filter(p=>p.status==='activo').length;
   document.getElementById('stat-prestamos').textContent = activosPrestamos;
+  // Quincenas registradas (total)
+  const statQ = document.getElementById('stat-quincenas');
+  if(statQ) statQ.textContent = quincenas.length;
 }
 
+window.changePassword=async()=>{
+  if(!currentUser?.email) return;
+  try {
+    await sendPasswordResetEmail(auth, currentUser.email);
+    showToast('📧 Te enviamos un correo para restablecer tu contraseña.');
+  } catch(e) {
+    showToast('❌ No se pudo enviar el correo. Intenta de nuevo.');
+  }
+};
+
 window.openEditPerfilModal=()=>{
-  const u = document.getElementById('edit-perfil-username');
   const e = document.getElementById('edit-perfil-email');
   if(u) u.value = currentUser?.displayName || '';
   if(e) e.value = currentUser?.email || '';
