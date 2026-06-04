@@ -569,12 +569,22 @@
           <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">PRÉSTAMOS ACTIVOS</div>
           <div style="font-size:20px;font-weight:700;color:var(--green)" id="stat-prestamos">--</div>
         </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;grid-column:1/-1;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">QUINCENAS REGISTRADAS</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent)" id="stat-quincenas">--</div>
+          <div style="font-size:10px;color:var(--text3)">en total</div>
+        </div>
       </div>
-      <!-- Botones en fila -->
-      <div style="display:flex;gap:8px;">
+      <!-- Cambiar contraseña -->
+      <button class="btn-secondary" onclick="changePassword()" style="margin-bottom:8px;margin-top:0;">🔑 Cambiar contraseña</button>
+      <!-- Botones principales abajo -->
+      <div style="display:flex;gap:8px;margin-top:4px;">
         <button class="btn-save" onclick="openEditPerfilModal()" style="flex:1;margin-top:0;">✏️ Editar perfil</button>
-        <button class="btn-danger" onclick="openDeleteAccountModal()" style="flex:1;margin-top:0;">🗑️ Eliminar cuenta</button>
+        <button class="btn-danger" onclick="confirmLogout()" style="flex:1;margin-top:0;">🚪 Cerrar sesión</button>
       </div>
+      <button class="btn-danger" onclick="openDeleteAccountModal()" style="margin-top:8px;background:transparent;border:1px solid var(--red);color:var(--red);font-size:13px;">🗑️ Eliminar cuenta</button>
+      <!-- Versión -->
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3);opacity:0.6;">MoniFy v1.0</div>
     </div>
   </div>
 
