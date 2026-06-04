@@ -56,7 +56,7 @@
       <button class="auth-tab-btn inactive-tab" id="tab-register" onclick="switchAuthMode('register')">Crear cuenta</button>
     </div>
     <div id="login-fields">
-      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="tu@correo.com"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="ejemplo@correo.com"></div>
       <div class="form-group"><label class="form-label">CONTRASEÑA</label><div style="position:relative;">
         <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;">
         <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-login"><span class="material-icons" style="font-size:20px;">visibility</span></button>
@@ -66,11 +66,11 @@
     </div>
     <div id="register-fields" style="display:none">
       <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="reg-username" placeholder="¿Cómo te llamas?"></div>
-      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="reg-email" placeholder="tu@correo.com"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="reg-email" placeholder="ejemplo@correo.com"></div>
       <div class="form-group">
         <label class="form-label">CONTRASEÑA</label>
         <div style="position:relative;">
-          <input class="form-input" type="password" id="reg-pass" placeholder="Mín. 6 caracteres + 1 especial" maxlength="20" style="padding-right:42px;">
+          <input class="form-input" type="password" id="reg-pass" placeholder="••••••••" maxlength="20" style="padding-right:42px;">
           <button type="button" onclick="togglePass('reg-pass','eye-reg')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-reg"><span class="material-icons" style="font-size:20px;">visibility</span></button>
         </div>
         <div class="pass-hint" id="pass-hint"></div>
@@ -656,10 +656,10 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Agregar cuenta</div>
-    <div style="font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.5;">Ingresa los datos de la cuenta que quieres agregar. Debe estar registrada y verificada en MoniFy.</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.5;">Ingresa los datos de la cuenta a agregar. Debe estar previamente registrada y verificada en MoniFy.</div>
     <div class="form-group">
       <label class="form-label">CORREO</label>
-      <input class="form-input" type="email" id="add-account-email" placeholder="tu@correo.com">
+      <input class="form-input" type="email" id="add-account-email" placeholder="ejemplo@correo.com">
     </div>
     <div class="form-group">
       <label class="form-label">CONTRASEÑA</label>
