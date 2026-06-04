@@ -46,7 +46,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .form-input:focus{border-color:var(--teal);}
 .form-input::placeholder{color:var(--text3);}
 .form-input:disabled{opacity:0.5;cursor:not-allowed;}
-.form-input[type="date"]{padding:12px 10px;font-size:14px;-webkit-appearance:none;appearance:none;}
+.form-input[type="date"]{padding:12px 14px;font-size:16px;height:48px;box-sizing:border-box;-webkit-appearance:none;appearance:none;}
 .pass-hint{font-size:11px;margin-top:4px;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
