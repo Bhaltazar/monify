@@ -1374,7 +1374,6 @@ window.saveEditCat=()=>{
     applyUserConfig();
     render();
     showToast('✅ Categoría actualizada');
-    setTimeout(()=>openModal('modal-settings'),200);
   }
 };
 
@@ -1519,8 +1518,7 @@ window.openEditSettingsCat=i=>{
   document.getElementById('edit-cat-emoji').value=setupCats[i].emoji;
   document.getElementById('edit-cat-name').value=setupCats[i].label;
   document.getElementById('modal-edit-cat').dataset.origin='settings';
-  closeModal('modal-settings');
-  setTimeout(()=>openModal('modal-edit-cat'),200);
+  openModal('modal-edit-cat');
 };
 
 window.tryDeleteSettingsCat=i=>{
@@ -1528,21 +1526,12 @@ window.tryDeleteSettingsCat=i=>{
   const catId=setupCats[i].id;
   const inUse=movimientos.some(m=>m.cat===catId);
   if(inUse){showToast('⚠️ Esta categoría está en uso, no puedes eliminarla');return;}
-  // Cerrar settings primero para que el confirm no quede detrás
-  closeModal('modal-settings');
-  setTimeout(()=>{
-    showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
+  showConfirm(`¿Eliminar "${setupCats[i].label}"?`,'Esta categoría se quitará de tu lista.','🗑️',()=>{
       setupCats.splice(i,1);
       renderSettingsCatList();
       renderSettingsCatPreview();
       showToast('🗑️ Categoría eliminada');
-      // Regresar al modal de settings y abrir directo el subpanel de cats
-      setTimeout(()=>{
-        openModal('modal-settings');
-        setTimeout(()=>openSettingsCats(),50);
-      },200);
     });
-  },350);
 };
 
 // ── Subpanel Categorías (deslizable) ──
