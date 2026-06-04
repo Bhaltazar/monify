@@ -542,7 +542,7 @@
       <button class="settings-back-btn" onclick="closeSettingsAccount()">‹ <span class="back-label">Volver</span></button>
     </div>
     <div class="settings-subpanel-body">
-      <!-- Perfil: avatar + nombre + correo (solo display) -->
+      <!-- Perfil: avatar + nombre + correo (solo display) -->\
       <div class="profile-header" style="padding-bottom:12px;">
         <div class="profile-avatar" id="settings-perfil-avatar">?</div>
         <div class="profile-name" id="settings-perfil-name">--</div>
@@ -575,16 +575,16 @@
           <div style="font-size:10px;color:var(--text3)">en total</div>
         </div>
       </div>
-      <!-- Cambiar contraseña -->
-      <button class="btn-secondary" onclick="changePassword()" style="margin-bottom:8px;margin-top:0;">🔑 Cambiar contraseña</button>
-      <!-- Botones principales abajo -->
-      <div style="display:flex;gap:8px;margin-top:4px;">
+    </div>
+    <!-- Botones fijos al fondo -->
+    <div style="padding:12px 16px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+      <button class="btn-secondary" onclick="changePassword()" style="margin-top:0;">🔑 Cambiar contraseña</button>
+      <div style="display:flex;gap:8px;">
         <button class="btn-save" onclick="openEditPerfilModal()" style="flex:1;margin-top:0;">✏️ Editar perfil</button>
         <button class="btn-danger" onclick="confirmLogout()" style="flex:1;margin-top:0;">🚪 Cerrar sesión</button>
       </div>
-      <button class="btn-danger" onclick="openDeleteAccountModal()" style="margin-top:8px;background:transparent;border:1px solid var(--red);color:var(--red);font-size:13px;">🗑️ Eliminar cuenta</button>
-      <!-- Versión -->
-      <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3);opacity:0.6;">MoniFy v1.0</div>
+      <button class="btn-danger" onclick="openDeleteAccountModal()" style="margin-top:0;background:transparent;border:1px solid var(--red);color:var(--red);font-size:13px;">🗑️ Eliminar cuenta</button>
+      <div style="text-align:center;font-size:11px;color:var(--text3);opacity:0.6;">MoniFy v1.0</div>
     </div>
   </div>
 
