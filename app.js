@@ -1676,7 +1676,7 @@ function renderAccountsList(){
       +'<div class="account-email">'+a.email+'</div>'
       +'</div>'
       +(isActive?'<div class="account-active-badge">Activa</div>':'')
-      +'<button onclick="event.stopPropagation();confirmRemoveAccount(''+a.uid+'')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:6px;margin-left:4px;display:flex;align-items:center;flex-shrink:0;" title="Eliminar cuenta"><span class="material-icons" style="font-size:20px;">delete</span></button>'
+      +`<button onclick="event.stopPropagation();confirmRemoveAccount('${a.uid}')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:6px;margin-left:4px;display:flex;align-items:center;flex-shrink:0;" title="Eliminar cuenta"><span class="material-icons" style="font-size:20px;">delete</span></button>`
       +'</div>';
   }).join('');
   // Solo mostrar botón agregar si hay menos de 2 cuentas
