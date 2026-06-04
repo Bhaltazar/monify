@@ -1554,6 +1554,8 @@ window.openSettingsAccount=()=>{
     if(su) su.value=currentUser.displayName||'';
     if(se) se.value=currentUser.email||'';
   }
+  // Actualizar stats
+  updatePerfilStats();
   document.getElementById('settings-subpanel-account')?.classList.add('open');
 };
 window.closeSettingsAccount=()=>{
@@ -1749,6 +1751,12 @@ window.cancelSwitchAccount=()=>{
   document.getElementById('switch-account-error').style.display = 'none';
   window._switchTargetUid = null;
   window._switchTargetEmail = null;
+  // Regresar al modal de cuentas y luego al perfil
+  setTimeout(()=>{
+    loadSavedAccounts();
+    renderAccountsList();
+    openModal('modal-accounts');
+  }, 300);
 };
 
 window.confirmSwitchAccount=async()=>{
@@ -1768,8 +1776,11 @@ window.confirmSwitchAccount=async()=>{
       errEl.style.display='block';
       return;
     }
-    // Éxito: cerrar modal, mostrar splash 2 seg y luego onAuthStateChanged se encarga
+    // Éxito: cerrar modal, ocultar app inmediatamente, mostrar splash y dejar que onAuthStateChanged tome el control
     closeModal('modal-switch-account');
+    // Ocultar app de inmediato para evitar que se vea el formulario detrás
+    document.getElementById('app-main').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'none';
     const splash = document.getElementById('global-splash-overlay');
     document.getElementById('global-splash-msg').textContent = 'Cambiando de cuenta...';
     splash.style.display = 'flex';
@@ -2089,20 +2100,31 @@ function positionTutorialTooltip(target, position){
   const tooltip = document.getElementById('tutorial-tooltip');
   const overlay = document.getElementById('tutorial-overlay');
   const ow = overlay.offsetWidth, oh = overlay.offsetHeight;
-  const tw = tooltip.offsetWidth || 280;
-  const th = tooltip.offsetHeight || 120;
+  const MARGIN = 12;
+  // Medir el tooltip después de que tenga contenido
+  tooltip.style.top = '0px'; tooltip.style.left = '0px';
+  const tw = Math.min(tooltip.offsetWidth || 280, ow - MARGIN * 2);
+  const th = tooltip.offsetHeight || 130;
   let top, left;
 
   if(target){
     const r = target.getBoundingClientRect();
-    left = Math.min(Math.max(r.left, 16), ow - tw - 16);
+    // Horizontal: centrado en el target, clamped a los bordes
+    left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(MARGIN, Math.min(left, ow - tw - MARGIN));
+
     if(position === 'bottom'){
-      top = r.bottom + 16;
-      if(top + th > oh - 16) top = r.top - th - 16;
+      top = r.bottom + MARGIN;
+      // Si se sale por abajo, ponerlo arriba del target
+      if(top + th > oh - MARGIN) top = r.top - th - MARGIN;
     } else {
-      top = r.top - th - 16;
-      if(top < 16) top = r.bottom + 16;
+      top = r.top - th - MARGIN;
+      // Si se sale por arriba, ponerlo abajo del target
+      if(top < MARGIN) top = r.bottom + MARGIN;
     }
+    // Último recurso: si aún se sale por abajo, forzar dentro de pantalla
+    if(top + th > oh - MARGIN) top = oh - th - MARGIN;
+    if(top < MARGIN) top = MARGIN;
   } else {
     left = (ow - tw) / 2;
     top = (oh - th) / 2;
