@@ -354,9 +354,12 @@ function startListeners(){
       }
       startMovsListener();
       render();
-      // Launch tutorial if flagged (only first time)
-      if(localStorage.getItem('monify_show_tutorial')==='1'){
-        setTimeout(startTutorial, 800);
+      // Launch tutorial if flagged (only first time, check Firestore)
+      if(window._pendingTutorial){
+        window._pendingTutorial = false;
+        getDoc(doc(db,'users',currentUser.uid)).then(snap=>{
+          if(!snap.data()?.tutorialDone) setTimeout(startTutorial, 800);
+        });
       }
     }
   );
@@ -1407,8 +1410,8 @@ window.saveSetup=async()=>{
     const am=document.getElementById('app-main');
     am.style.display='flex'; am.style.flexDirection='column';
     startListeners();
-    // Marcar tutorial para mostrar
-    if(!localStorage.getItem('monify_tutorial_done')) localStorage.setItem('monify_show_tutorial','1');
+    // Marcar tutorial para mostrar (se verifica en startListeners contra Firestore)
+    window._pendingTutorial = true;
   } catch(e){
     overlay.style.display='none';
     showToast('Error al guardar configuración');
@@ -1455,13 +1458,18 @@ window.saveSettings=async()=>{
     closeModal('modal-settings');
     render();
     showToast('✅ Configuración guardada');
-    // Tutorial para secciones recién activadas
-    if(ahorroJustEnabled && !localStorage.getItem('monify_tutorial_ahorro')){
-      currentTab='ahorro'; render();
-      setTimeout(()=>startSectionTutorial('ahorro'), 500);
-    } else if(prestamosJustEnabled && !localStorage.getItem('monify_tutorial_prestamos')){
-      currentTab='prestamos'; render();
-      setTimeout(()=>startSectionTutorial('prestamos'), 500);
+    // Tutorial para secciones recién activadas (verificar contra Firestore)
+    if((ahorroJustEnabled || prestamosJustEnabled) && currentUser){
+      getDoc(doc(db,'users',currentUser.uid)).then(snap=>{
+        const flags = snap.data() || {};
+        if(ahorroJustEnabled && !flags.tutorialAhorroDone){
+          currentTab='ahorro'; render();
+          setTimeout(()=>startSectionTutorial('ahorro'), 500);
+        } else if(prestamosJustEnabled && !flags.tutorialPrestamosDone){
+          currentTab='prestamos'; render();
+          setTimeout(()=>startSectionTutorial('prestamos'), 500);
+        }
+      });
     }
   } catch(e){
     overlay.style.display='none';
@@ -1901,11 +1909,13 @@ function endTutorial(){
   document.getElementById('modal-add')?.classList.remove('open');
   document.getElementById('modal-prestamo')?.classList.remove('open');
   document.getElementById('tutorial-overlay').style.display = 'none';
-  localStorage.removeItem('monify_show_tutorial');
-  localStorage.setItem('monify_tutorial_done','1');
-  // Mark section tutorials as done if they were included
-  if(userConfig?.sections?.ahorro !== false) localStorage.setItem('monify_tutorial_ahorro','1');
-  if(userConfig?.sections?.prestamos !== false) localStorage.setItem('monify_tutorial_prestamos','1');
+  // Guardar tutorialDone en Firestore (por cuenta, no por dispositivo)
+  if(currentUser){
+    const tutorialFlags = { tutorialDone: true };
+    if(userConfig?.sections?.ahorro !== false) tutorialFlags.tutorialAhorroDone = true;
+    if(userConfig?.sections?.prestamos !== false) tutorialFlags.tutorialPrestamosDone = true;
+    updateDoc(doc(db,'users',currentUser.uid), tutorialFlags).catch(()=>{});
+  }
   // Return to movimientos tab
   currentTab = 'movimientos';
   render();
@@ -2002,43 +2012,18 @@ const TUTORIAL_AHORRO = TUTORIAL_AHORRO_STEPS;
 const TUTORIAL_PRESTAMOS = TUTORIAL_PRESTAMOS_STEPS;
 
 function startSectionTutorial(section){
-  const steps = section==='ahorro' ? TUTORIAL_AHORRO : TUTORIAL_PRESTAMOS;
-  const doneKey = section==='ahorro' ? 'monify_tutorial_ahorro' : 'monify_tutorial_prestamos';
-  let step = 0;
+  // Reusar el mismo flujo completo del tutorial general, iniciando en los pasos de la sección.
+  // Esto garantiza que sea idéntico tanto si la sección estaba activa desde el setup
+  // como si se activó después desde Configuración.
+  buildTutorialSteps();
+  // Encontrar el índice del primer paso de la sección dentro de TUTORIAL_STEPS
+  const sectionSteps = section==='ahorro' ? TUTORIAL_AHORRO_STEPS : TUTORIAL_PRESTAMOS_STEPS;
+  const firstStepText = sectionSteps[0].text;
+  const startIdx = TUTORIAL_STEPS.findIndex(s => s.text === firstStepText);
+  tutorialStep = startIdx >= 0 ? startIdx : 0;
   tutorialActive = true;
   document.getElementById('tutorial-overlay').style.display = 'block';
-
-  const badge = document.getElementById('tutorial-step-badge');
-  const text = document.getElementById('tutorial-text');
-  const nextBtn = document.getElementById('tutorial-next-btn');
-  const skipBtn = document.getElementById('tutorial-skip-btn');
-
-  function showStep(){
-    if(step >= steps.length){ endSectionTutorial(doneKey); return; }
-    const s = steps[step];
-    badge.textContent = `${section==='ahorro'?'Ahorro':'Préstamos'} · Paso ${step+1} de ${steps.length}`;
-    text.textContent = s.text;
-    nextBtn.textContent = step === steps.length-1 ? '¡Listo! ✓' : 'Siguiente →';
-    const target = document.querySelector(s.selector);
-    drawTutorialCanvas(target);
-    positionTutorialTooltip(target, s.position);
-  }
-
-  // Override next button temporarily
-  const origNext = nextBtn.onclick;
-  nextBtn.onclick = ()=>{ step++; showStep(); };
-  const origSkip = skipBtn.onclick;
-  skipBtn.onclick = ()=>endSectionTutorial(doneKey);
-
-  showStep();
-
-  function endSectionTutorial(key){
-    tutorialActive = false;
-    document.getElementById('tutorial-overlay').style.display = 'none';
-    localStorage.setItem(key,'1');
-    nextBtn.onclick = origNext;
-    skipBtn.onclick = origSkip;
-  }
+  renderTutorialStep();
 }
 
 // Tutorial for ahorro/prestamos tab on first visit (if section was active from setup)
@@ -2047,10 +2032,15 @@ function hookTabTutorial(){
   document.querySelectorAll('.nav-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       const t = tab.dataset.tab;
-      if(t==='ahorro' && !localStorage.getItem('monify_tutorial_ahorro')){
-        setTimeout(()=>startSectionTutorial('ahorro'), 600);
-      } else if(t==='prestamos' && !localStorage.getItem('monify_tutorial_prestamos')){
-        setTimeout(()=>startSectionTutorial('prestamos'), 600);
+      if(!currentUser) return;
+      if(t==='ahorro'){
+        getDoc(doc(db,'users',currentUser.uid)).then(snap=>{
+          if(!snap.data()?.tutorialAhorroDone) setTimeout(()=>startSectionTutorial('ahorro'), 600);
+        });
+      } else if(t==='prestamos'){
+        getDoc(doc(db,'users',currentUser.uid)).then(snap=>{
+          if(!snap.data()?.tutorialPrestamosDone) setTimeout(()=>startSectionTutorial('prestamos'), 600);
+        });
       }
     });
   });
