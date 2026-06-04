@@ -145,35 +145,16 @@ window.loginEmail = async () => {
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showToast('Completa correo y contraseña');return;}
-  const isSwitching = window._switchingToEmail && window._switchingToEmail===email;
   try {
-    // Mostrar splash ANTES del login si es cambio de cuenta
-    if(isSwitching){
-      const overlay=document.getElementById('setup-saving-overlay');
-      const splashMsg=document.getElementById('splash-msg');
-      if(splashMsg) splashMsg.textContent='Cambiando de cuenta...';
-      overlay.style.display='flex';
-    }
     const cred = await signInWithEmailAndPassword(auth,email,pass);
     if(!cred.user.emailVerified){
-      // Ocultar splash si había aparecido
-      document.getElementById('setup-saving-overlay').style.display='none';
       await signOut(auth);
       const b=document.getElementById('verify-banner');
       b.style.display='block';
       b.textContent='📧 Aún no verificas tu correo. Revisa tu bandeja de entrada.';
       return;
     }
-    if(isSwitching){
-      window._switchingToEmail=null;
-      const authEmail=document.getElementById('auth-email');
-      if(authEmail) authEmail.readOnly=false;
-      // Mantener splash visible mínimo 1.5s para que se lea
-      await new Promise(r=>setTimeout(r,1500));
-      document.getElementById('setup-saving-overlay').style.display='none';
-    }
   } catch(e) {
-    document.getElementById('setup-saving-overlay').style.display='none';
     showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión');
   }
 };
@@ -222,21 +203,6 @@ window.confirmLogout = () => {
 
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
-  if(!user && window._switchingToEmail){
-    // Venimos de un cambio de cuenta: mostrar login con email prellenado y bloqueado
-    const emailToFill=window._switchingToEmail;
-    // NO limpiamos _switchingToEmail aún; lo usará loginEmail para el splash
-    const authEmail=document.getElementById('auth-email');
-    if(authEmail){ authEmail.value=emailToFill; authEmail.readOnly=true; }
-    const authPass=document.getElementById('auth-pass');
-    if(authPass){ authPass.value=''; }
-    // Mostrar solo el tab de login
-    switchAuthMode('login');
-    document.getElementById('app-main').style.display='none';
-    document.getElementById('setup-screen').style.display='none';
-    document.getElementById('auth-screen').style.display='flex';
-    return;
-  }
   if(user && user.emailVerified){
     currentUser=user;
     const snap=await getDoc(doc(db,'users',user.uid));
@@ -1599,6 +1565,15 @@ function loadSavedAccounts(){
   } catch(e){ savedAccounts=[]; }
 }
 
+function removeAccountLocally(uid){
+  try {
+    let accounts=JSON.parse(localStorage.getItem('monify_accounts')||'[]');
+    accounts=accounts.filter(a=>a.uid!==uid);
+    localStorage.setItem('monify_accounts',JSON.stringify(accounts));
+    savedAccounts=accounts;
+  } catch(e){}
+}
+
 window.openAccountsModal=async()=>{
   closeModal('modal-perfil');
   loadSavedAccounts();
@@ -1612,26 +1587,106 @@ function renderAccountsList(){
   list.innerHTML=savedAccounts.map(a=>{
     const isActive=currentUser&&a.uid===currentUser.uid;
     const onclick=isActive?'':'onclick="switchToAccount(\''+a.uid+'\',\''+a.email+'\')"';
-    return '<div class="account-item '+(isActive?'active-account':'')+'" '+onclick+'>'
+    return '<div class="account-item '+(isActive?'active-account':'')+'" '+onclick+' style="position:relative;">'
       +'<div class="account-avatar">'+getInitials(a.displayName)+'</div>'
       +'<div class="account-info">'
       +'<div class="account-name">'+a.displayName+'</div>'
       +'<div class="account-email">'+a.email+'</div>'
       +'</div>'
       +(isActive?'<div class="account-active-badge">Activa</div>':'')
+      +'<button onclick="event.stopPropagation();confirmRemoveAccount(''+a.uid+'')" style="background:none;border:none;cursor:pointer;color:var(--red);padding:6px;margin-left:4px;display:flex;align-items:center;flex-shrink:0;" title="Eliminar cuenta"><span class="material-icons" style="font-size:20px;">delete</span></button>'
       +'</div>';
   }).join('');
   // Solo mostrar botón agregar si hay menos de 2 cuentas
   addBtn.style.display=savedAccounts.length>=2?'none':'block';
 }
 
-window.switchToAccount=async(uid,email)=>{
+window.switchToAccount=(uid,email)=>{
   closeModal('modal-accounts');
-  // Guardamos el email destino: loginEmail lo usará para mostrar el splash al autenticar
-  window._switchingToEmail=email;
-  if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
-  await signOut(auth);
-  // onAuthStateChanged mostrará el form con el email prellenado
+  setTimeout(()=>{
+    // Mostrar modal dedicado de cambio de cuenta
+    const acc = savedAccounts.find(a=>a.uid===uid);
+    document.getElementById('switch-account-email').value = email;
+    document.getElementById('switch-account-pass').value = '';
+    document.getElementById('switch-account-error').style.display = 'none';
+    const info = document.getElementById('switch-account-info');
+    info.textContent = acc ? 'Ingresa tu contraseña para continuar como ' + acc.displayName : 'Ingresa tu contraseña para continuar';
+    window._switchTargetUid = uid;
+    window._switchTargetEmail = email;
+    openModal('modal-switch-account');
+  }, 350);
+};
+
+window.cancelSwitchAccount=()=>{
+  closeModal('modal-switch-account');
+  document.getElementById('switch-account-pass').value = '';
+  document.getElementById('switch-account-error').style.display = 'none';
+  window._switchTargetUid = null;
+  window._switchTargetEmail = null;
+};
+
+window.confirmSwitchAccount=async()=>{
+  const email = document.getElementById('switch-account-email').value;
+  const pass = document.getElementById('switch-account-pass').value;
+  const errEl = document.getElementById('switch-account-error');
+  errEl.style.display = 'none';
+  if(!pass){ errEl.textContent='Ingresa tu contraseña'; errEl.style.display='block'; return; }
+  try {
+    // Desuscribir listeners antes de cambiar
+    if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+    await signOut(auth);
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    if(!cred.user.emailVerified){
+      await signOut(auth);
+      errEl.textContent='Este correo aún no está verificado.';
+      errEl.style.display='block';
+      return;
+    }
+    // Éxito: cerrar modal, mostrar splash 2 seg y luego onAuthStateChanged se encarga
+    closeModal('modal-switch-account');
+    const splash = document.getElementById('global-splash-overlay');
+    document.getElementById('global-splash-msg').textContent = 'Cambiando de cuenta...';
+    splash.style.display = 'flex';
+    setTimeout(()=>{ splash.style.display = 'none'; }, 2000);
+  } catch(e){
+    errEl.textContent = e.code==='auth/invalid-credential'?'Contraseña incorrecta':'Error al iniciar sesión';
+    errEl.style.display = 'block';
+  }
+};
+
+window.confirmRemoveAccount=(uid)=>{
+  const acc = savedAccounts.find(a=>a.uid===uid);
+  if(!acc) return;
+  const isActive = currentUser && uid===currentUser.uid;
+  closeModal('modal-accounts');
+  setTimeout(()=>{
+    if(isActive){
+      showConfirm(
+        '¿Eliminar esta cuenta?',
+        'Se cerrará tu sesión y se eliminará de la lista. Podrás seguir usando la otra cuenta guardada.',
+        '🗑️',
+        async()=>{
+          removeAccountLocally(uid);
+          if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+          await signOut(auth);
+        },
+        'btn-danger'
+      );
+    } else {
+      showConfirm(
+        '¿Eliminar ' + acc.displayName + '?',
+        'Se quitará de tu lista de cuentas guardadas.',
+        '🗑️',
+        ()=>{
+          removeAccountLocally(uid);
+          loadSavedAccounts();
+          openModal('modal-accounts');
+          renderAccountsList();
+        },
+        'btn-danger'
+      );
+    }
+  }, 350);
 };
 
 window.startAddAccount=()=>{
@@ -1716,25 +1771,39 @@ const TUTORIAL_MODAL_STEPS = [
   {
     // Open modal-add first, then explain Gasto button
     selector: '#type-gasto',
-    text: '💸 "Gasto" para registrar cualquier cosa que gastes. Aquí también capturas el monto, una descripción opcional, la categoría y la fecha.',
+    text: '💸 "Gasto" para registrar cualquier cosa que gastes: comida, transporte, servicios... lo que sea que salga de tu bolsillo. Toca Siguiente para ver cómo se llena.',
     position: 'bottom',
     action: 'open-modal-add'
   },
   {
+    selector: '#type-gasto',
+    text: '📝 Aquí capturas el monto, una descripción opcional, la categoría y la fecha del gasto.',
+    position: 'bottom',
+    modalOpen: true
+  },
+  {
     selector: '#type-ahorro-transfer',
-    text: '💰 "Ahorro" para mover dinero de tu disponible a tu ahorro personal. El monto se descuenta de lo disponible y se guarda aparte.',
+    text: '💰 "Ahorro" para mover dinero de tu disponible a tu fondo de ahorro personal. Lo que metas aquí se guarda aparte y no cuenta como gasto.',
+    position: 'bottom',
+    modalOpen: true,
+    action: 'select-ahorro'
+  },
+  {
+    selector: '#type-ahorro-transfer',
+    text: '📝 Solo captura el monto y la fecha. No necesita categoría ni descripción, es directo a tu ahorro.',
     position: 'bottom',
     modalOpen: true
   },
   {
     selector: '#type-ingreso',
-    text: '💲 "Extra" para registrar ingresos adicionales: bonos, ventas, regalos... Puedes mandarlo al ahorro o sumarlo a tu disponible.',
+    text: '💲 "Extra" para registrar ingresos adicionales: bonos, ventas, regalos... cualquier dinero que entre fuera de tu quincena normal.',
     position: 'bottom',
-    modalOpen: true
+    modalOpen: true,
+    action: 'select-ingreso'
   },
   {
     selector: '.destino-toggle',
-    text: '🎯 Al registrar un Extra, tú decides: "Al ahorro" lo guarda en tu ahorro, "Al disponible" lo suma a tu saldo del que puedes gastar.',
+    text: '🎯 Con el Extra tú decides a dónde va: "Al ahorro" lo guarda en tu fondo, "Al disponible" lo suma al saldo que puedes gastar.',
     position: 'bottom',
     modalOpen: true,
     action: 'show-destino-then-close'
@@ -1806,17 +1875,27 @@ async function renderTutorialStep(){
 
   // Handle actions before rendering
   if(step.action === 'open-modal-add'){
-    // Show ingreso type to reveal destino-toggle, then open modal
-    currentType = 'ingreso'; currentDestino = 'ahorro';
+    // Open modal with Gasto selected by default
+    currentType = 'gasto';
     _origOpenModal('modal-add');
     await new Promise(r => setTimeout(r, 350));
-    // Make sure destino-wrap is visible for the destino step
-    document.getElementById('destino-wrap').style.display = 'block';
-    renderTypeToggle(); renderDestinoToggle();
+    document.getElementById('destino-wrap').style.display = 'none';
+    renderTypeToggle();
   } else if(step.action === 'show-destino-then-close'){
     // Show destino toggle (already visible from open-modal-add), will close on next
   } else if(step.action === 'close-modal-add'){
     // handled in next-btn
+  } else if(step.action === 'select-ahorro'){
+    currentType = 'ahorro-transfer';
+    document.getElementById('destino-wrap').style.display = 'none';
+    document.getElementById('cat-wrap') && (document.getElementById('cat-wrap').style.display = 'none');
+    renderTypeToggle();
+    await new Promise(r => setTimeout(r, 200));
+  } else if(step.action === 'select-ingreso'){
+    currentType = 'ingreso'; currentDestino = 'ahorro';
+    document.getElementById('destino-wrap').style.display = 'block';
+    renderTypeToggle(); renderDestinoToggle();
+    await new Promise(r => setTimeout(r, 200));
   } else if(step.action === 'switch-tab-ahorro'){
     currentTab = 'ahorro';
     render();
