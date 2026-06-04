@@ -273,13 +273,20 @@ onAuthStateChanged(auth, async user => {
 
 function setUserUI(username, email){
   const initials=getInitials(username);
-  document.getElementById('user-name-label').textContent=username;
-  document.getElementById('avatar-btn').textContent=initials;
-  document.getElementById('perfil-avatar').textContent=initials;
-  document.getElementById('perfil-name').textContent=username;
-  document.getElementById('perfil-email').textContent=email;
-  document.getElementById('perfil-username-input').value=username;
-  document.getElementById('perfil-email-input').value=email;
+  const userNameLabel=document.getElementById('user-name-label');
+  const avatarBtn=document.getElementById('avatar-btn');
+  const perfilAvatar=document.getElementById('perfil-avatar');
+  const perfilName=document.getElementById('perfil-name');
+  const perfilEmail=document.getElementById('perfil-email');
+  const perfilUsernameInput=document.getElementById('perfil-username-input');
+  const perfilEmailInput=document.getElementById('perfil-email-input');
+  if(userNameLabel) userNameLabel.textContent=username;
+  if(avatarBtn) avatarBtn.textContent=initials;
+  if(perfilAvatar) perfilAvatar.textContent=initials;
+  if(perfilName) perfilName.textContent=username;
+  if(perfilEmail) perfilEmail.textContent=email;
+  if(perfilUsernameInput) perfilUsernameInput.value=username;
+  if(perfilEmailInput) perfilEmailInput.value=email;
   // También llenar subpanel Mi cuenta en settings
   const su=document.getElementById('settings-username-input');
   const se=document.getElementById('settings-email-input');
