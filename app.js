@@ -1871,35 +1871,49 @@ window.confirmRemoveAccount=(uid)=>{
 };
 
 window.startAddAccount=()=>{
+  // Limpiar form y abrir modal de agregar cuenta
+  document.getElementById('add-account-email').value='';
+  document.getElementById('add-account-pass').value='';
+  document.getElementById('add-account-error').style.display='none';
   closeModal('modal-accounts');
-  setTimeout(()=>{
-    if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
-    // Guardar uid actual para poder regresar
-    window._addAccountPrevUid = currentUser?.uid;
-    window._addAccountPrevEmail = currentUser?.email;
-    // Mostrar botón de volver en el form de auth
-    document.getElementById('auth-back-btn').style.display='block';
-    signOut(auth).then(()=>showToast('Inicia sesión con la segunda cuenta'));
-  },350);
+  setTimeout(()=>openModal('modal-add-account'),300);
 };
 
-window.cancelAddAccount=async()=>{
-  document.getElementById('auth-back-btn').style.display='none';
-  const prevEmail = window._addAccountPrevEmail;
-  window._addAccountPrevUid = null;
-  window._addAccountPrevEmail = null;
-  // Siempre mostrar auth-screen para que no quede fondo negro
-  document.getElementById('auth-screen').style.display='flex';
-  if(prevEmail){
-    // Mostrar modal de switch para que ingrese su contraseña y regrese
-    const acc = savedAccounts.find(a=>a.email===prevEmail);
-    document.getElementById('switch-account-email').value = prevEmail;
-    document.getElementById('switch-account-pass').value = '';
-    document.getElementById('switch-account-error').style.display = 'none';
-    const info = document.getElementById('switch-account-info');
-    info.textContent = acc ? 'Ingresa tu contraseña para continuar como ' + acc.displayName : 'Ingresa tu contraseña para regresar';
-    window._switchTargetEmail = prevEmail;
-    openModal('modal-switch-account');
+window.cancelAddAccount=()=>{
+  closeModal('modal-add-account');
+  setTimeout(()=>openModal('modal-accounts'),300);
+};
+
+window.confirmAddAccount=async()=>{
+  const email=document.getElementById('add-account-email').value.trim();
+  const pass=document.getElementById('add-account-pass').value;
+  const errEl=document.getElementById('add-account-error');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Ingresa correo y contraseña';errEl.style.display='block';return;}
+  // Mostrar splash
+  const splash=document.getElementById('global-splash-overlay');
+  document.getElementById('global-splash-msg').textContent='Cambiando de cuenta...';
+  splash.style.display='flex';
+  try {
+    if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+    await signOut(auth);
+    const cred=await signInWithEmailAndPassword(auth,email,pass);
+    if(!cred.user.emailVerified){
+      await signOut(auth);
+      splash.style.display='none';
+      errEl.textContent='Este correo aún no está verificado.';
+      errEl.style.display='block';
+      // Re-login con cuenta anterior
+      return;
+    }
+    closeModal('modal-add-account');
+    document.getElementById('app-main').style.display='none';
+    document.getElementById('auth-screen').style.display='none';
+    setTimeout(()=>{ splash.style.display='none'; },2000);
+  } catch(e){
+    splash.style.display='none';
+    errEl.textContent=e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión';
+    errEl.style.display='block';
   }
 };
 
