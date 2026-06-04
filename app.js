@@ -1830,14 +1830,26 @@ window.confirmRemoveAccount=(uid)=>{
   closeModal('modal-accounts');
   setTimeout(()=>{
     if(isActive){
+      const otraCuenta = savedAccounts.filter(a=>a.uid!==uid).length > 0;
+      const subMsg = otraCuenta
+        ? 'Se cerrará tu sesión y se eliminará de la lista. Podrás seguir usando la otra cuenta guardada.'
+        : 'Se cerrará tu sesión. Tendrás que volver a iniciar sesión para acceder a tu cuenta.';
       showConfirm(
-        '¿Eliminar esta cuenta?',
-        'Se cerrará tu sesión y se eliminará de la lista. Podrás seguir usando la otra cuenta guardada.',
+        '¿Borrar esta cuenta?',
+        subMsg,
         '🗑️',
         async()=>{
+          const otra = savedAccounts.find(a=>a.uid!==uid);
           removeAccountLocally(uid);
           if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
           await signOut(auth);
+          // Si había otra cuenta, pre-llenar su correo en el login
+          if(otra){
+            setTimeout(()=>{
+              const emailInput = document.getElementById('auth-email');
+              if(emailInput) emailInput.value = otra.email;
+            }, 400);
+          }
         },
         'btn-danger'
       );
@@ -1876,6 +1888,8 @@ window.cancelAddAccount=async()=>{
   const prevEmail = window._addAccountPrevEmail;
   window._addAccountPrevUid = null;
   window._addAccountPrevEmail = null;
+  // Siempre mostrar auth-screen para que no quede fondo negro
+  document.getElementById('auth-screen').style.display='flex';
   if(prevEmail){
     // Mostrar modal de switch para que ingrese su contraseña y regrese
     const acc = savedAccounts.find(a=>a.email===prevEmail);
@@ -1885,11 +1899,7 @@ window.cancelAddAccount=async()=>{
     const info = document.getElementById('switch-account-info');
     info.textContent = acc ? 'Ingresa tu contraseña para continuar como ' + acc.displayName : 'Ingresa tu contraseña para regresar';
     window._switchTargetEmail = prevEmail;
-    document.getElementById('auth-screen').style.display='none';
     openModal('modal-switch-account');
-  } else {
-    // Sin cuenta previa: simplemente mostrar auth screen normal
-    document.getElementById('auth-screen').style.display='flex';
   }
 };
 
