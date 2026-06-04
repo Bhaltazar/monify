@@ -280,6 +280,11 @@ function setUserUI(username, email){
   document.getElementById('perfil-email').textContent=email;
   document.getElementById('perfil-username-input').value=username;
   document.getElementById('perfil-email-input').value=email;
+  // También llenar subpanel Mi cuenta en settings
+  const su=document.getElementById('settings-username-input');
+  const se=document.getElementById('settings-email-input');
+  if(su) su.value=username;
+  if(se) se.value=email;
 }
 
 window.saveProfile = async () => {
@@ -1388,10 +1393,9 @@ window.saveSetup=async()=>{
 window.openSettings=()=>{
   closeModal('modal-perfil');
   // Cerrar subpaneles por si quedaron abiertos
-  const panelCats=document.getElementById('settings-subpanel-cats');
-  if(panelCats) panelCats.classList.remove('open');
-  const panelSec=document.getElementById('settings-subpanel-sections');
-  if(panelSec) panelSec.classList.remove('open');
+  document.getElementById('settings-subpanel-cats')?.classList.remove('open');
+  document.getElementById('settings-subpanel-sections')?.classList.remove('open');
+  document.getElementById('settings-subpanel-account')?.classList.remove('open');
   // Cargar config actual en el modal de settings
   if(userConfig&&userConfig.cats) setupCats=userConfig.cats.map(c=>({...c}));
   else setupCats=[...DEFAULT_CATS];
@@ -1533,6 +1537,84 @@ window.closeSettingsSections=()=>{
   const panel=document.getElementById('settings-subpanel-sections');
   if(panel) panel.classList.remove('open');
 };
+
+// ── Subpanel Mi cuenta (deslizable) ──
+window.openSettingsAccount=()=>{
+  // Asegurar que los campos estén al día
+  const su=document.getElementById('settings-username-input');
+  const se=document.getElementById('settings-email-input');
+  if(currentUser){
+    if(su) su.value=currentUser.displayName||'';
+    if(se) se.value=currentUser.email||'';
+  }
+  document.getElementById('settings-subpanel-account')?.classList.add('open');
+};
+window.closeSettingsAccount=()=>{
+  document.getElementById('settings-subpanel-account')?.classList.remove('open');
+};
+
+window.saveProfileFromSettings=async()=>{
+  const newName=document.getElementById('settings-username-input').value.trim();
+  if(!newName){showToast('El nombre no puede estar vacío');return;}
+  try {
+    await updateProfile(currentUser,{displayName:newName});
+    await updateDoc(doc(db,'users',currentUser.uid),{username:newName});
+    setUserUI(newName,currentUser.email);
+    const ind=document.getElementById('save-indicator-settings');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
+    showToast('Perfil actualizado ✅');
+  } catch(e){ showToast('Error al guardar perfil'); }
+};
+
+window.confirmDeleteAccount=()=>{
+  closeModal('modal-settings');
+  setTimeout(()=>{
+    showConfirm(
+      '¿Eliminar tu cuenta permanentemente?',
+      'Se borrarán todos tus datos: movimientos, quincenas, préstamos y configuración. Esta acción no se puede deshacer.',
+      '⚠️',
+      deleteAccountPermanently,
+      'btn-danger'
+    );
+  }, 350);
+};
+
+async function deleteAccountPermanently(){
+  const uid = currentUser?.uid;
+  if(!uid) return;
+  const splash = document.getElementById('global-splash-overlay');
+  document.getElementById('global-splash-msg').textContent = 'Eliminando cuenta...';
+  splash.style.display = 'flex';
+  try {
+    // 1. Borrar movimientos
+    const movsSnap = await getDocs(query(collection(db,'movimientos'), where('uid','==',uid)));
+    await Promise.all(movsSnap.docs.map(d=>deleteDoc(d.ref)));
+    // 2. Borrar quincenas
+    const qSnap = await getDocs(query(collection(db,'quincenas'), where('uid','==',uid)));
+    await Promise.all(qSnap.docs.map(d=>deleteDoc(d.ref)));
+    // 3. Borrar préstamos
+    const pSnap = await getDocs(query(collection(db,'prestamos'), where('uid','==',uid)));
+    await Promise.all(pSnap.docs.map(d=>deleteDoc(d.ref)));
+    // 4. Borrar pagos de préstamos
+    try {
+      const pgSnap = await getDocs(query(collection(db,'pagos'), where('uid','==',uid)));
+      await Promise.all(pgSnap.docs.map(d=>deleteDoc(d.ref)));
+    } catch(e){}
+    // 5. Borrar userConfig y users doc
+    await deleteDoc(doc(db,'userConfig',uid)).catch(()=>{});
+    await deleteDoc(doc(db,'users',uid)).catch(()=>{});
+    // 6. Quitar de cuentas guardadas localmente
+    removeAccountLocally(uid);
+    // 7. Eliminar cuenta de Firebase Auth (requiere re-auth reciente; si falla, solo cerramos sesión)
+    if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+    try { await currentUser.delete(); } catch(e){ await signOut(auth); }
+    splash.style.display = 'none';
+    showToast('✅ Cuenta eliminada permanentemente');
+  } catch(e){
+    splash.style.display = 'none';
+    showToast('⚠️ Error al eliminar. Intenta de nuevo.');
+  }
+}
 
 // Also hook the drag-drop callbacks to refresh settings preview
 const _origOnDrop=window.onDrop;
