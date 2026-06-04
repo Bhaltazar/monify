@@ -211,7 +211,7 @@
     <div class="modal-title">Cuentas</div>
     <div id="accounts-list"></div>
     <button class="btn-save" id="add-account-btn" onclick="startAddAccount()">＋ Agregar cuenta</button>
-    <button class="btn-secondary" onclick="closeModal('modal-accounts')">Cerrar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-accounts');setTimeout(()=>openModal('modal-perfil'),300)">Cerrar</button>
   </div>
 </div>
 
@@ -385,17 +385,56 @@
       <div class="profile-name" id="perfil-name">--</div>
       <div class="profile-email-txt" id="perfil-email">--</div>
     </div>
-    <div class="profile-card">
-      <div class="profile-card-title">Mi cuenta</div>
-      <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="perfil-username-input" disabled style="opacity:0.7;cursor:default;"></div>
-      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="perfil-email-input" disabled style="opacity:0.7;cursor:default;"></div>
+    <!-- Stats de la última quincena -->
+    <div id="perfil-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">MOVIMIENTOS</div>
+        <div style="font-size:20px;font-weight:700;color:var(--accent)" id="stat-movimientos">--</div>
+        <div style="font-size:10px;color:var(--text3)">última quincena</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">DISPONIBLE</div>
+        <div style="font-size:15px;font-weight:700;color:var(--teal)" id="stat-disponible">--</div>
+        <div style="font-size:10px;color:var(--text3)">última quincena</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;grid-column:1/-1;">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">PRÉSTAMOS ACTIVOS</div>
+        <div style="font-size:20px;font-weight:700;color:var(--green)" id="stat-prestamos">--</div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button class="btn-warn" onclick="openAccountsModal()" style="flex:1;margin-top:0;">👤 Cuentas</button>
       <button class="btn-secondary" onclick="openSettings()" style="flex:1;margin-top:0;">⚙️ Config.</button>
     </div>
+    <button class="btn-save" onclick="openEditPerfilModal()" style="margin-top:8px;">✏️ Editar perfil</button>
+    <button class="btn-danger" onclick="openDeleteAccountModal()" style="margin-top:8px;">🗑️ Eliminar cuenta</button>
     <button class="btn-danger" onclick="confirmLogout()" style="margin-top:8px;">Cerrar sesión</button>
     <button class="btn-secondary" onclick="closeModal('modal-perfil')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PERFIL (encima del modal-perfil) -->
+<div class="modal-overlay centered" id="modal-edit-perfil">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar perfil</div>
+    <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="edit-perfil-username" placeholder="Tu nombre"></div>
+    <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="edit-perfil-email" disabled style="opacity:0.7;cursor:default;"></div>
+    <div class="save-indicator" id="save-indicator-perfil" style="opacity:0;text-align:center;margin-bottom:4px;">✓ Guardado</div>
+    <button class="btn-save" onclick="saveEditPerfil()">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-perfil')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR CUENTA (encima del modal-perfil) -->
+<div class="modal-overlay centered" id="modal-delete-account">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;font-size:36px;margin:8px 0;">⚠️</div>
+    <div class="modal-title" style="text-align:center;">¿Eliminar tu cuenta?</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:16px;">Se borrarán permanentemente tu cuenta y todos tus datos: movimientos, quincenas, préstamos y configuración.<br><strong style="color:var(--red);">Esta acción no se puede deshacer.</strong></div>
+    <button class="btn-danger" onclick="deleteAccountPermanently()" style="width:100%;">Sí, eliminar todo</button>
+    <button class="btn-secondary" onclick="closeModal('modal-delete-account')" style="margin-top:8px;">Cancelar</button>
   </div>
 </div>
 
@@ -506,7 +545,7 @@
     </div>
 
     <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
-    <button class="btn-secondary" onclick="closeModal('modal-settings')">Cancelar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-settings');setTimeout(()=>openModal('modal-perfil'),300)">Cancelar</button>
   </div>
 
   <!-- Panel secundario: Mi cuenta -->
@@ -514,7 +553,6 @@
     <div class="settings-subpanel-header">
       <button class="settings-back-btn" onclick="closeSettingsAccount()">‹ <span class="back-label">Volver</span></button>
     </div>
-    <div class="settings-subpanel-section-title">Mi cuenta</div>
     <div class="settings-subpanel-body">
       <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="settings-username-input" placeholder="Tu nombre"></div>
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="settings-email-input" disabled style="opacity:0.7;cursor:default;"></div>
