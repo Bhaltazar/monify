@@ -40,6 +40,9 @@
 
 <!-- AUTH -->
 <div id="auth-screen">
+  <div id="auth-back-btn" style="display:none;position:absolute;top:16px;left:16px;">
+    <button onclick="cancelAddAccount()" style="background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 0;display:flex;align-items:center;gap:2px;">‹ Volver</button>
+  </div>
   <img src="icon-192.png" style="width:72px;height:72px;border-radius:22px;margin-bottom:12px" onerror="this.style.display='none'">
   <div class="auth-logo">MoniFy</div>
   <div class="auth-tagline">Tu control de quincena,<br>siempre contigo</div>
@@ -563,27 +566,6 @@
         <button class="btn-save" onclick="openEditPerfilModal()" style="flex:1;margin-top:0;">✏️ Editar perfil</button>
         <button class="btn-danger" onclick="openDeleteAccountModal()" style="flex:1;margin-top:0;">🗑️ Eliminar cuenta</button>
       </div>
-    </div>
-
-    <!-- Modal editar perfil encima del subpanel -->
-    <div id="mi-cuenta-edit-overlay" style="display:none;position:absolute;inset:0;background:var(--bg2);border-radius:inherit;z-index:10;display:flex;flex-direction:column;padding:16px;overflow-y:auto;">
-      <div style="display:flex;align-items:center;margin-bottom:16px;">
-        <button onclick="closeMiCuentaEdit()" style="background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;">‹ Volver</button>
-        <div style="font-size:15px;font-weight:700;color:var(--text);">Editar perfil</div>
-      </div>
-      <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="settings-username-input" placeholder="Tu nombre"></div>
-      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="settings-email-input" disabled style="opacity:0.7;cursor:default;"></div>
-      <button class="btn-save" onclick="saveProfileFromSettings()" style="margin-top:4px;">Guardar cambios</button>
-      <div class="save-indicator" id="save-indicator-settings" style="opacity:0;text-align:center;margin-top:6px;">✓ Guardado</div>
-    </div>
-
-    <!-- Modal eliminar cuenta encima del subpanel -->
-    <div id="mi-cuenta-delete-overlay" style="display:none;position:absolute;inset:0;background:var(--bg2);border-radius:inherit;z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
-      <div style="font-size:36px;margin-bottom:8px;">⚠️</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);text-align:center;margin-bottom:8px;">¿Eliminar tu cuenta?</div>
-      <div style="font-size:13px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:20px;">Se borrarán permanentemente tu cuenta y todos tus datos: movimientos, quincenas, préstamos y configuración.<br><strong style="color:var(--red);">Esta acción no se puede deshacer.</strong></div>
-      <button class="btn-danger" onclick="deleteAccountPermanently()" style="width:100%;margin-bottom:8px;">Sí, eliminar todo</button>
-      <button class="btn-secondary" onclick="closeMiCuentaDelete()" style="width:100%;">Cancelar</button>
     </div>
   </div>
 
