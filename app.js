@@ -1547,15 +1547,27 @@ window.closeSettingsSections=()=>{
 
 // ── Subpanel Mi cuenta (deslizable) ──
 window.openSettingsAccount=()=>{
-  // Asegurar que los campos estén al día
-  const su=document.getElementById('settings-username-input');
-  const se=document.getElementById('settings-email-input');
+  // Llenar nombre/correo display
   if(currentUser){
-    if(su) su.value=currentUser.displayName||'';
+    const av=document.getElementById('perfil-avatar');
+    const nm=document.getElementById('perfil-name');
+    const em=document.getElementById('perfil-email');
+    const name=currentUser.displayName||currentUser.email.split('@')[0];
+    if(av) av.textContent=getInitials(name);
+    if(nm) nm.textContent=name;
+    if(em) em.textContent=currentUser.email;
+    // También llenar inputs del overlay de edición
+    const su=document.getElementById('settings-username-input');
+    const se=document.getElementById('settings-email-input');
+    if(su) su.value=name;
     if(se) se.value=currentUser.email||'';
   }
-  // Actualizar stats
+  // Actualizar stats y asegurarse que los overlays estén ocultos
   updatePerfilStats();
+  const editOv=document.getElementById('mi-cuenta-edit-overlay');
+  const delOv=document.getElementById('mi-cuenta-delete-overlay');
+  if(editOv) editOv.style.display='none';
+  if(delOv) delOv.style.display='none';
   document.getElementById('settings-subpanel-account')?.classList.add('open');
 };
 window.closeSettingsAccount=()=>{
