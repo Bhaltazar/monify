@@ -1462,10 +1462,14 @@ window.saveSettings=async()=>{
     if((ahorroJustEnabled || prestamosJustEnabled) && currentUser){
       getDoc(doc(db,'users',currentUser.uid)).then(snap=>{
         const flags = snap.data() || {};
-        if(ahorroJustEnabled && !flags.tutorialAhorroDone){
+        const runAhorro = ahorroJustEnabled && !flags.tutorialAhorroDone;
+        const runPrestamos = prestamosJustEnabled && !flags.tutorialPrestamosDone;
+        if(runAhorro){
+          // Si también hay que mostrar préstamos, encadenar después de que termine ahorro
+          if(runPrestamos) window._afterSectionTutorial = ()=>{ currentTab='prestamos'; render(); setTimeout(()=>startSectionTutorial('prestamos'), 400); };
           currentTab='ahorro'; render();
           setTimeout(()=>startSectionTutorial('ahorro'), 500);
-        } else if(prestamosJustEnabled && !flags.tutorialPrestamosDone){
+        } else if(runPrestamos){
           currentTab='prestamos'; render();
           setTimeout(()=>startSectionTutorial('prestamos'), 500);
         }
@@ -1909,14 +1913,31 @@ function endTutorial(){
   document.getElementById('modal-add')?.classList.remove('open');
   document.getElementById('modal-prestamo')?.classList.remove('open');
   document.getElementById('tutorial-overlay').style.display = 'none';
-  // Guardar tutorialDone en Firestore (por cuenta, no por dispositivo)
+  // Guardar flags en Firestore (por cuenta, no por dispositivo)
   if(currentUser){
-    const tutorialFlags = { tutorialDone: true };
-    if(userConfig?.sections?.ahorro !== false) tutorialFlags.tutorialAhorroDone = true;
-    if(userConfig?.sections?.prestamos !== false) tutorialFlags.tutorialPrestamosDone = true;
-    updateDoc(doc(db,'users',currentUser.uid), tutorialFlags).catch(()=>{});
+    const section = window._sectionTutorialSection;
+    window._sectionTutorialSection = null;
+    if(section){
+      // Tutorial de sección activada después: solo guardar el flag de esa sección
+      const flag = section==='ahorro' ? { tutorialAhorroDone: true } : { tutorialPrestamosDone: true };
+      updateDoc(doc(db,'users',currentUser.uid), flag).catch(()=>{});
+      // Si hay otro tutorial de sección encadenado (ej: ambas secciones activadas juntas), lanzarlo
+      if(window._afterSectionTutorial){
+        const next = window._afterSectionTutorial;
+        window._afterSectionTutorial = null;
+        setTimeout(next, 300);
+      }
+      // No regresar a movimientos: quedarse en la pestaña de la sección
+      return;
+    } else {
+      // Tutorial general completo
+      const tutorialFlags = { tutorialDone: true };
+      if(userConfig?.sections?.ahorro !== false) tutorialFlags.tutorialAhorroDone = true;
+      if(userConfig?.sections?.prestamos !== false) tutorialFlags.tutorialPrestamosDone = true;
+      updateDoc(doc(db,'users',currentUser.uid), tutorialFlags).catch(()=>{});
+    }
   }
-  // Return to movimientos tab
+  // Return to movimientos tab (solo para tutorial general)
   currentTab = 'movimientos';
   render();
 }
@@ -2012,16 +2033,14 @@ const TUTORIAL_AHORRO = TUTORIAL_AHORRO_STEPS;
 const TUTORIAL_PRESTAMOS = TUTORIAL_PRESTAMOS_STEPS;
 
 function startSectionTutorial(section){
-  // Reusar el mismo flujo completo del tutorial general, iniciando en los pasos de la sección.
-  // Esto garantiza que sea idéntico tanto si la sección estaba activa desde el setup
-  // como si se activó después desde Configuración.
-  buildTutorialSteps();
-  // Encontrar el índice del primer paso de la sección dentro de TUTORIAL_STEPS
+  // Cuando la sección se activa DESPUÉS del setup, correr solo los pasos de esa sección
+  // numerados desde 1 hasta N. Sin pasos base ni avatar.
   const sectionSteps = section==='ahorro' ? TUTORIAL_AHORRO_STEPS : TUTORIAL_PRESTAMOS_STEPS;
-  const firstStepText = sectionSteps[0].text;
-  const startIdx = TUTORIAL_STEPS.findIndex(s => s.text === firstStepText);
-  tutorialStep = startIdx >= 0 ? startIdx : 0;
+  TUTORIAL_STEPS = [...sectionSteps];
+  tutorialStep = 0;
   tutorialActive = true;
+  // Flag para que endTutorial sepa que fue un tutorial de sección
+  window._sectionTutorialSection = section;
   document.getElementById('tutorial-overlay').style.display = 'block';
   renderTutorialStep();
 }
