@@ -535,14 +535,14 @@
       <button class="settings-back-btn" onclick="closeSettingsAccount()">‹ <span class="back-label">Volver</span></button>
     </div>
     <div class="settings-subpanel-body">
-      <!-- Perfil: avatar + nombre -->
+      <!-- Perfil: avatar + nombre + correo (solo display) -->
       <div class="profile-header" style="padding-bottom:12px;">
         <div class="profile-avatar" id="perfil-avatar">?</div>
         <div class="profile-name" id="perfil-name">--</div>
         <div class="profile-email-txt" id="perfil-email">--</div>
       </div>
       <!-- Stats -->
-      <div id="perfil-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div id="perfil-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">MOVIMIENTOS</div>
           <div style="font-size:20px;font-weight:700;color:var(--accent)" id="stat-movimientos">--</div>
@@ -558,16 +558,32 @@
           <div style="font-size:20px;font-weight:700;color:var(--green)" id="stat-prestamos">--</div>
         </div>
       </div>
-      <!-- Editar nombre -->
+      <!-- Botones en fila -->
+      <div style="display:flex;gap:8px;">
+        <button class="btn-save" onclick="openEditPerfilModal()" style="flex:1;margin-top:0;">✏️ Editar perfil</button>
+        <button class="btn-danger" onclick="openDeleteAccountModal()" style="flex:1;margin-top:0;">🗑️ Eliminar cuenta</button>
+      </div>
+    </div>
+
+    <!-- Modal editar perfil encima del subpanel -->
+    <div id="mi-cuenta-edit-overlay" style="display:none;position:absolute;inset:0;background:var(--bg2);border-radius:inherit;z-index:10;display:flex;flex-direction:column;padding:16px;overflow-y:auto;">
+      <div style="display:flex;align-items:center;margin-bottom:16px;">
+        <button onclick="closeMiCuentaEdit()" style="background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;">‹ Volver</button>
+        <div style="font-size:15px;font-weight:700;color:var(--text);">Editar perfil</div>
+      </div>
       <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="settings-username-input" placeholder="Tu nombre"></div>
       <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="settings-email-input" disabled style="opacity:0.7;cursor:default;"></div>
       <button class="btn-save" onclick="saveProfileFromSettings()" style="margin-top:4px;">Guardar cambios</button>
-      <div class="save-indicator" id="save-indicator-settings" style="opacity:0;">✓ Guardado</div>
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Zona de peligro</div>
-        <button class="btn-danger" onclick="confirmDeleteAccount()" style="width:100%;">🗑️ Eliminar mi cuenta</button>
-        <div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5;text-align:center;">Se borrarán permanentemente tu cuenta y todos tus datos.</div>
-      </div>
+      <div class="save-indicator" id="save-indicator-settings" style="opacity:0;text-align:center;margin-top:6px;">✓ Guardado</div>
+    </div>
+
+    <!-- Modal eliminar cuenta encima del subpanel -->
+    <div id="mi-cuenta-delete-overlay" style="display:none;position:absolute;inset:0;background:var(--bg2);border-radius:inherit;z-index:10;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+      <div style="font-size:36px;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);text-align:center;margin-bottom:8px;">¿Eliminar tu cuenta?</div>
+      <div style="font-size:13px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:20px;">Se borrarán permanentemente tu cuenta y todos tus datos: movimientos, quincenas, préstamos y configuración.<br><strong style="color:var(--red);">Esta acción no se puede deshacer.</strong></div>
+      <button class="btn-danger" onclick="deleteAccountPermanently()" style="width:100%;margin-bottom:8px;">Sí, eliminar todo</button>
+      <button class="btn-secondary" onclick="closeMiCuentaDelete()" style="width:100%;">Cancelar</button>
     </div>
   </div>
 
