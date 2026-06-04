@@ -1567,16 +1567,9 @@ window.saveProfileFromSettings=async()=>{
 };
 
 window.confirmDeleteAccount=()=>{
+  // Desde settings: cerrar settings y abrir modal-delete-account
   closeModal('modal-settings');
-  setTimeout(()=>{
-    showConfirm(
-      '¿Eliminar tu cuenta permanentemente?',
-      'Se borrarán todos tus datos: movimientos, quincenas, préstamos y configuración. Esta acción no se puede deshacer.',
-      '⚠️',
-      deleteAccountPermanently,
-      'btn-danger'
-    );
-  }, 350);
+  setTimeout(()=>{ openModal('modal-delete-account'); }, 350);
 };
 
 async function deleteAccountPermanently(){
@@ -1609,6 +1602,8 @@ async function deleteAccountPermanently(){
     if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
     try { await currentUser.delete(); } catch(e){ await signOut(auth); }
     splash.style.display = 'none';
+    closeModal('modal-delete-account');
+    closeModal('modal-perfil');
     showToast('✅ Cuenta eliminada permanentemente');
   } catch(e){
     splash.style.display = 'none';
@@ -1661,6 +1656,48 @@ window.openAccountsModal=async()=>{
   loadSavedAccounts();
   renderAccountsList();
   openModal('modal-accounts');
+};
+
+function updatePerfilStats(){
+  // Movimientos de la última quincena
+  const totalMovs = movimientos.length;
+  document.getElementById('stat-movimientos').textContent = totalMovs;
+  // Disponible (última quincena)
+  const q = quincenas.find(q=>q.id===currentQuincenaId);
+  const gastos = movimientos.filter(m=>m.type==='gasto').reduce((a,m)=>a+m.monto,0);
+  const ahorroTransfers = movimientos.filter(m=>m.type==='ahorro-transfer').reduce((a,m)=>a+m.monto,0);
+  const extrasDisp = movimientos.filter(m=>m.type==='ingreso'&&m.destino==='disponible').reduce((a,m)=>a+m.monto,0);
+  const disponible = q ? q.saldo - gastos - ahorroTransfers + extrasDisp : 0;
+  document.getElementById('stat-disponible').textContent = fmt(disponible);
+  // Préstamos activos
+  const activosPrestamos = prestamos.filter(p=>p.status==='activo').length;
+  document.getElementById('stat-prestamos').textContent = activosPrestamos;
+}
+
+window.openEditPerfilModal=()=>{
+  const u = document.getElementById('edit-perfil-username');
+  const e = document.getElementById('edit-perfil-email');
+  if(u) u.value = currentUser?.displayName || '';
+  if(e) e.value = currentUser?.email || '';
+  document.getElementById('save-indicator-perfil').style.opacity='0';
+  openModal('modal-edit-perfil');
+};
+
+window.saveEditPerfil=async()=>{
+  const newName = document.getElementById('edit-perfil-username').value.trim();
+  if(!newName){ showToast('El nombre no puede estar vacío'); return; }
+  try {
+    await updateProfile(currentUser,{displayName:newName});
+    await updateDoc(doc(db,'users',currentUser.uid),{username:newName});
+    setUserUI(newName, currentUser.email);
+    const ind = document.getElementById('save-indicator-perfil');
+    if(ind){ ind.style.opacity='1'; setTimeout(()=>ind.style.opacity='0',2500); }
+    showToast('Perfil actualizado ✅');
+  } catch(e){ showToast('Error al guardar perfil'); }
+};
+
+window.openDeleteAccountModal=()=>{
+  openModal('modal-delete-account');
 };
 
 function renderAccountsList(){
@@ -1858,7 +1895,7 @@ const TUTORIAL_MODAL_STEPS = [
     action: 'open-modal-add'
   },
   {
-    selector: '#type-gasto',
+    selector: '#modal-add .modal',
     text: '📝 Aquí capturas el monto, una descripción opcional, la categoría y la fecha del gasto.',
     position: 'bottom',
     modalOpen: true
@@ -1871,7 +1908,7 @@ const TUTORIAL_MODAL_STEPS = [
     action: 'select-ahorro'
   },
   {
-    selector: '#type-ahorro-transfer',
+    selector: '#modal-add .modal',
     text: '📝 Solo captura el monto y la fecha. No necesita categoría ni descripción, es directo a tu ahorro.',
     position: 'bottom',
     modalOpen: true
@@ -1884,7 +1921,7 @@ const TUTORIAL_MODAL_STEPS = [
     action: 'select-ingreso'
   },
   {
-    selector: '.destino-toggle',
+    selector: '#modal-add .modal',
     text: '🎯 Con el Extra tú decides a dónde va: "Al ahorro" lo guarda en tu fondo, "Al disponible" lo suma al saldo que puedes gastar.',
     position: 'bottom',
     modalOpen: true,
@@ -2181,6 +2218,7 @@ const _origOpenModal = window.openModal;
 window.openModal = id => {
   _origOpenModal(id);
   if(id === 'modal-add') setTimeout(updateAhorroBtn, 50);
+  if(id === 'modal-perfil') setTimeout(updatePerfilStats, 50);
 };
 
 // Hook into FAB click to also check after renderDestinoToggle
