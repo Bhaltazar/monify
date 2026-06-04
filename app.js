@@ -42,6 +42,7 @@ let setupDragOverIdx = null;
 let savedAccounts = []; // [{uid, email, displayName}]
 
 let currentUser = null;
+let isLoggingIn = false;
 let quincenas = [];
 let movimientos = [];
 let currentQuincenaId = null;
@@ -145,17 +146,23 @@ window.loginEmail = async () => {
   const email=document.getElementById('auth-email').value.trim();
   const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showToast('Completa correo y contraseña');return;}
+  isLoggingIn = true;
   try {
     const cred = await signInWithEmailAndPassword(auth,email,pass);
     if(!cred.user.emailVerified){
       await signOut(auth);
+      isLoggingIn = false;
       const b=document.getElementById('verify-banner');
       b.style.display='block';
       b.textContent='📧 Aún no verificas tu correo. Revisa tu bandeja de entrada.';
       return;
     }
+    // Login exitoso — onAuthStateChanged toma el control
   } catch(e) {
-    showToast(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión');
+    isLoggingIn = false;
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':'Error al iniciar sesión';
+    errEl.style.display = 'block';
   }
 };
 
@@ -203,6 +210,7 @@ window.confirmLogout = () => {
 
 onAuthStateChanged(auth, async user => {
   document.getElementById('loader').style.display='none';
+  if(isLoggingIn && !user) return; // login en proceso, ignorar estado intermedio
   if(user && user.emailVerified){
     currentUser=user;
     const snap=await getDoc(doc(db,'users',user.uid));
