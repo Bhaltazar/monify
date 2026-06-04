@@ -25,7 +25,7 @@
 #modal-edit-perfil{z-index:1100;}
 #modal-delete-account{z-index:1100;}
 #modal-confirm{z-index:1100;}
-#modal-edit-cat{z-index:1100;}
+#modal-edit-cat{z-index:300;}
 .settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
 .settings-subpanel.open{transform:translateX(0);}
 .settings-subpanel-header{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -56,12 +56,13 @@
       <button class="auth-tab-btn inactive-tab" id="tab-register" onclick="switchAuthMode('register')">Crear cuenta</button>
     </div>
     <div id="login-fields">
-      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="ejemplo@correo.com"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="ejemplo@correo.com" oninput="document.getElementById('login-error').style.display='none'"></div>
       <div class="form-group"><label class="form-label">CONTRASEÑA</label><div style="position:relative;">
-        <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;">
+        <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;" oninput="document.getElementById('login-error').style.display='none'">
         <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-login"><span class="material-icons" style="font-size:20px;">visibility</span></button>
       </div></div>
       <button class="btn-primary" onclick="loginEmail()">Entrar</button>
+      <div id="login-error" style="display:none;color:var(--red);font-size:12px;text-align:center;margin-top:6px;"></div>
       <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
     </div>
     <div id="register-fields" style="display:none">
@@ -542,7 +543,7 @@
       <button class="settings-back-btn" onclick="closeSettingsAccount()">‹ <span class="back-label">Volver</span></button>
     </div>
     <div class="settings-subpanel-body">
-      <!-- Perfil: avatar + nombre + correo (solo display) -->
+      <!-- Perfil: avatar + nombre + correo (solo display) -->\
       <div class="profile-header" style="padding-bottom:12px;">
         <div class="profile-avatar" id="settings-perfil-avatar">?</div>
         <div class="profile-name" id="settings-perfil-name">--</div>
