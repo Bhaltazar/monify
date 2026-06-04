@@ -49,6 +49,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .form-input[type="date"]{box-sizing:border-box;max-width:100%;}
 .pass-hint{font-size:11px;margin-top:4px;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-row .form-group{overflow:hidden;min-width:0;}
 
 /* BUTTONS */
 /* FAB grande (Agregar movimiento / Nuevo préstamo) — sin tocar */
