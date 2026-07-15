@@ -176,6 +176,17 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+
+        <div class="setup-switch-row">
+          <div>
+            <div class="setup-switch-label">🏍️ Kms</div>
+            <div class="setup-switch-sub">Lleva el control de tu kilometraje y gasolina</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setup-switch-kms" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
       <button class="btn-primary" onclick="setupGoStep(3)" style="margin-top:8px;">Siguiente →</button>
       <button class="btn-secondary" onclick="setupGoStep(1)" style="margin-top:6px;">← Atrás</button>
@@ -269,7 +280,7 @@
       </div>
     </div>
   </div>
-  <div class="balance-section">
+  <div class="balance-section" id="balance-section">
     <div class="balance-card">
       <div class="balance-grid">
         <div><div class="balance-item-label">Inicio</div><div class="balance-item-value v-accent" id="saldo-inicial-display">$0</div></div>
@@ -281,6 +292,14 @@
         <div class="progress-bar-labels"><span>Progreso del gasto</span><span id="progress-pct">0%</span></div>
         <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
       </div>
+    </div>
+  </div>
+
+  <div class="kms-header" id="kms-header" style="display:none">
+    <div class="kms-header-icon">🏍️</div>
+    <div>
+      <div class="kms-header-title">Control de tu moto</div>
+      <div class="kms-header-sub">Kilómetros y gasolina, aparte de tu quincena</div>
     </div>
   </div>
 
@@ -470,6 +489,31 @@
   </div>
 </div>
 
+<!-- MODAL REGISTRAR KM DEL DÍA -->
+<div class="modal-overlay" id="modal-km">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📏 Registrar KM del día</div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="km-fecha"></div>
+    <div class="form-group"><label class="form-label">KILOMETRAJE ACTUAL *</label><input class="form-input" type="number" inputmode="decimal" id="km-valor" placeholder="ej. 45230"></div>
+    <button class="btn-save" onclick="saveKmRegistro()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-km')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR CARGA DE GASOLINA -->
+<div class="modal-overlay" id="modal-gas">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⛽ Registrar carga de gasolina</div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="gas-fecha"></div>
+    <div class="form-group"><label class="form-label">MONTO CARGADO *</label><input class="form-input" type="number" inputmode="decimal" id="gas-monto" placeholder="$0.00"></div>
+    <div class="form-group"><label class="form-label">LITROS (opcional)</label><input class="form-input" type="number" inputmode="decimal" id="gas-litros" placeholder="ej. 12.5"></div>
+    <button class="btn-save" onclick="saveGasRegistro()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-gas')">Cancelar</button>
+  </div>
+</div>
+
 <!-- MODAL REGISTRAR PAGO / INTERÉS -->
 <div class="modal-overlay" id="modal-pago">
   <div class="modal">
@@ -641,6 +685,17 @@
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="settings-switch-prestamos">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🏍️ Kms</div>
+          <div class="setup-switch-sub">Lleva el control de tu kilometraje y gasolina</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-switch-kms">
           <span class="toggle-slider"></span>
         </label>
       </div>
