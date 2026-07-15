@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, query, where, orderBy, limit, onSnapshot, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { startMotoListener, stopMotoListener, renderKms } from './moto.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD1LtTOBsbEoeg6OJzb9hCN2HfsxOGTV4I",
@@ -120,6 +121,9 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 window.openModal = openModal;
 window.closeModal = closeModal;
 
+// ── EXPORTS para moto.js (sección Kms, módulo aparte) ──
+export { db, fmt, fmtDate, today, showToast, openModal, closeModal, currentUser, currentQuincenaId, quincenas, currentTab, userConfig };
+
 document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
 });
@@ -202,7 +206,7 @@ window.confirmLogout = () => {
   closeModal('modal-perfil');
   setTimeout(() => {
     showConfirm('¿Cerrar sesión?','Tendrás que volver a iniciar sesión la próxima vez.','↩️',async()=>{
-      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos();
+      if(unsubMovs)unsubMovs(); if(unsubQs)unsubQs(); if(unsubPrestamos)unsubPrestamos(); stopMotoListener();
       await signOut(auth);
     },'btn-danger');
   }, 350);
@@ -256,7 +260,7 @@ onAuthStateChanged(auth, async user => {
             });
           }
         } catch(e){ /* si falla, usamos defaults */ }
-        userConfig = { cats: recoveredCats, sections: { ahorro: true, prestamos: true } };
+        userConfig = { cats: recoveredCats, sections: { ahorro: true, prestamos: true, kms: true } };
         await setDoc(doc(db,'userConfig',user.uid), userConfig);
         applyUserConfig();
         document.getElementById('auth-screen').style.display='none';
@@ -342,6 +346,7 @@ function showConfirm(msg, sub, icon, onOk, btnClass='btn-danger'){
 function startListeners(){
   if(unsubQs)unsubQs(); if(unsubMovs)unsubMovs(); if(unsubPrestamos)unsubPrestamos();
   startPrestamosListener();
+  startMotoListener();
   unsubQs=onSnapshot(
     query(collection(db,'quincenas'),where('uid','==',currentUser.uid),orderBy('inicio','desc')),
     snap=>{
@@ -351,6 +356,7 @@ function startListeners(){
         currentQuincenaId=quincenas.length>0 ? quincenas[0].id : null;
       }
       startMovsListener();
+      startMotoListener();
       render();
       // Launch tutorial if flagged (only first time, check Firestore)
       if(window._pendingTutorial){
@@ -397,7 +403,7 @@ window.createQuincena = async () => {
 };
 
 window.selectQuincena = id => {
-  currentQuincenaId=id; startMovsListener(); closeModal('modal-quincena'); render();
+  currentQuincenaId=id; startMovsListener(); startMotoListener(); closeModal('modal-quincena'); render();
 };
 
 window.openEditQuincena = id => {
@@ -995,12 +1001,18 @@ function renderPrestamos(){
 // ── MAIN RENDER ───────────────────────────────────────
 function render(){
   document.getElementById('fab-btn').textContent=currentTab==='prestamos'?'＋ Nuevo préstamo':'＋ Agregar movimiento';
+  document.getElementById('fab-btn').style.display=currentTab==='kms'?'none':'';
+  const balSection=document.getElementById('balance-section');
+  const kmsHeader=document.getElementById('kms-header');
+  if(balSection) balSection.style.display=currentTab==='kms'?'none':'';
+  if(kmsHeader) kmsHeader.style.display=currentTab==='kms'?'flex':'none';
   updateHeader();
   rebuildNavTabs();
   if(currentTab==='movimientos')renderMovimientos();
   else if(currentTab==='resumen')renderResumen();
   else if(currentTab==='ahorro')renderAhorro();
   else if(currentTab==='prestamos')renderPrestamos();
+  else if(currentTab==='kms')renderKms();
 }
 
 // ── NAV TABS ──────────────────────────────────────────
@@ -1015,6 +1027,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 
 // ── FAB ───────────────────────────────────────────────
 document.getElementById('fab-btn').addEventListener('click',async()=>{
+  if(currentTab==='kms'){return;}
   if(currentTab==='prestamos'){clearPrestamoForm();openModal('modal-prestamo');return;}
   const q=getCurrentQ();
   if(!q){await renderQuincenaList();openModal('modal-quincena');return;}
@@ -1097,12 +1110,13 @@ function getActiveTabs(){
   const tabs=['movimientos','resumen'];
   if(!userConfig||userConfig.sections?.ahorro!==false) tabs.push('ahorro');
   if(!userConfig||userConfig.sections?.prestamos!==false) tabs.push('prestamos');
+  if(!userConfig||userConfig.sections?.kms!==false) tabs.push('kms');
   return tabs;
 }
 
 function rebuildNavTabs(){
   const tabs=getActiveTabs();
-  const labels={movimientos:'Movimientos',resumen:'Resumen',ahorro:'Ahorro',prestamos:'Préstamos'};
+  const labels={movimientos:'Movimientos',resumen:'Resumen',ahorro:'Ahorro',prestamos:'Préstamos',kms:'Kms'};
   const nav=document.querySelector('.nav-tabs');
   if(!nav)return;
   nav.innerHTML=tabs.map(t=>`<div class="nav-tab${t===currentTab?' active':''}" data-tab="${t}">${labels[t]}</div>`).join('');
@@ -1393,7 +1407,8 @@ window.saveSetup=async()=>{
     const cats=setupCats.map((c,i)=>({...c,color:c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length]}));
     const sections={
       ahorro:document.getElementById('setup-switch-ahorro').checked,
-      prestamos:document.getElementById('setup-switch-prestamos').checked
+      prestamos:document.getElementById('setup-switch-prestamos').checked,
+      kms:document.getElementById('setup-switch-kms').checked
     };
     userConfig={cats,sections};
     await setDoc(doc(db,'userConfig',currentUser.uid),userConfig);
@@ -1427,6 +1442,7 @@ window.openSettings=()=>{
   else setupCats=[...DEFAULT_CATS];
   document.getElementById('settings-switch-ahorro').checked=userConfig?.sections?.ahorro||false;
   document.getElementById('settings-switch-prestamos').checked=userConfig?.sections?.prestamos||false;
+  document.getElementById('settings-switch-kms').checked=userConfig?.sections?.kms!==false;
   renderSettingsCatList();
   renderSettingsCatPreview();
   openModal('modal-settings');
@@ -1442,10 +1458,11 @@ window.saveSettings=async()=>{
     const cats=setupCats.map((c,i)=>({...c,color:c.color||CAT_COLOR_POOL[i%CAT_COLOR_POOL.length]}));
     const ahorroChecked=document.getElementById('settings-switch-ahorro').checked;
     const prestamosChecked=document.getElementById('settings-switch-prestamos').checked;
+    const kmsChecked=document.getElementById('settings-switch-kms').checked;
     // Detect if sections were just enabled (for tutorial)
     const ahorroJustEnabled = ahorroChecked && userConfig?.sections?.ahorro===false;
     const prestamosJustEnabled = prestamosChecked && userConfig?.sections?.prestamos===false;
-    const sections={ahorro:ahorroChecked,prestamos:prestamosChecked};
+    const sections={ahorro:ahorroChecked,prestamos:prestamosChecked,kms:kmsChecked};
     userConfig={cats,sections};
     await setDoc(doc(db,'userConfig',currentUser.uid),userConfig);
     applyUserConfig();
@@ -1982,6 +1999,12 @@ async function checkSectionDisable(section,isChecked){
     const hasActive=prestamos.some(p=>p.status==='activo');
     if(hasActive) showToast('⚠️ Tienes préstamos activos en esta u otra quincena. Se guardarán y se ocultará la sección.', 4500);
   }
+  if(section==='kms'&&currentUser){
+    try {
+      const snap=await getDocs(query(collection(db,'motoRegistros'),where('uid','==',currentUser.uid),limit(1)));
+      if(!snap.empty) showToast('⚠️ Tienes registros de Kms guardados. Se conservarán y se ocultará la sección.', 4500);
+    } catch(e){}
+  }
 }
 
 document.getElementById('setup-switch-ahorro').addEventListener('change',e=>{
@@ -1989,6 +2012,9 @@ document.getElementById('setup-switch-ahorro').addEventListener('change',e=>{
 });
 document.getElementById('setup-switch-prestamos').addEventListener('change',e=>{
   checkSectionDisable('prestamos',e.target.checked);
+});
+document.getElementById('setup-switch-kms')?.addEventListener('change',e=>{
+  checkSectionDisable('kms',e.target.checked);
 });
 
 renderCatGrid();
@@ -2450,6 +2476,9 @@ document.getElementById('settings-switch-ahorro')?.addEventListener('change',e=>
 });
 document.getElementById('settings-switch-prestamos')?.addEventListener('change',e=>{
   checkSectionDisable('prestamos',e.target.checked);
+});
+document.getElementById('settings-switch-kms')?.addEventListener('change',e=>{
+  checkSectionDisable('kms',e.target.checked);
 });
 
 // Hook tab clicks for section tutorials
