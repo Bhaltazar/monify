@@ -46,7 +46,10 @@ export function startMotoListener(){
       lastGlobalKm = hasKm ? null : await fetchLastGlobalKm();
       if(currentTab==='kms') renderKms();
     },
-    ()=>{ /* si falla el listener (p.ej. falta índice en Firestore), no truena la app */ }
+    err=>{
+      console.error('Error en listener de Kms (moto.js):', err);
+      showToast('⚠️ Error al cargar Kms: '+(err.message||err.code||'revisa la consola'), 5000);
+    }
   );
 }
 
