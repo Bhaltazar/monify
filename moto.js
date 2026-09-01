@@ -175,7 +175,7 @@ window.saveGasRegistro = async () => {
       closeModal('modal-gas');
       showToast('⛽ Carga registrada');
     }
-  } catch(e){ showToast('Error al guardar'); }
+  } catch(e){ console.error('Error al guardar carga (moto.js):', e); showToast('Error al guardar: '+(e.message||e.code||'revisa la consola'), 5000); }
 };
 
 // ── DETALLE / ELIMINAR ────────────────────────────────────────
@@ -206,7 +206,7 @@ window.showCargaDetail = id => {
             await updateDoc(doc(db,'motoCargas',next.id), {kmAnterior, kmRecorridos});
           }
           showToast('🗑️ Carga eliminada');
-        } catch(e){ showToast('Error al eliminar'); }
+        } catch(e){ console.error('Error al eliminar carga (moto.js):', e); showToast('Error al eliminar: '+(e.message||e.code||'revisa la consola'), 5000); }
       });
     },350);
   };
