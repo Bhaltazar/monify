@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1021">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoniFy">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>MoniFy</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<style>
+.settings-nav-row{display:flex;align-items:center;justify-content:space-between;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;color:var(--text);font-family:var(--font);transition:background .15s;text-align:left;}
+.settings-nav-row:active{background:var(--bg2);}
+.settings-nav-label{display:flex;align-items:center;gap:12px;}
+.settings-nav-icon{font-size:20px;}
+.settings-nav-title{font-size:14px;font-weight:600;color:var(--text);}
+.settings-nav-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.settings-nav-arrow{font-size:24px;color:var(--text3);line-height:1;}
+#modal-settings .modal{position:relative;overflow:hidden;}
+#modal-edit-perfil{z-index:1100;}
+#modal-delete-account{z-index:1100;}
+#modal-confirm{z-index:1100;}
+#modal-edit-cat{z-index:1100;}
+.settings-subpanel{position:absolute;inset:0;background:var(--bg2);border-radius:inherit;transform:translateX(110%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;z-index:2;}
+.settings-subpanel.open{transform:translateX(0);}
+.settings-subpanel-header{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.settings-back-btn{background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 8px 4px 0;display:flex;align-items:center;gap:2px;}
+.back-label{font-size:11px;font-weight:500;}
+.settings-subpanel-title{font-size:15px;font-weight:700;color:var(--text);}
+.settings-subpanel-section-title{font-size:17px;font-weight:700;color:var(--text);text-align:center;padding:14px 16px 0;}
+.settings-subpanel-body{padding:16px;overflow-y:auto;flex:1;}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <img src="splash.png" style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div id="auth-back-btn" style="display:none;position:absolute;top:16px;left:16px;">
+    <button onclick="cancelAddAccount()" style="background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);padding:4px 0;display:flex;align-items:center;gap:2px;">‹ Volver</button>
+  </div>
+  <img src="icon-192.png" style="width:72px;height:72px;border-radius:22px;margin-bottom:12px" onerror="this.style.display='none'">
+  <div class="auth-logo">MoniFy</div>
+  <div class="auth-tagline">Tu control de quincena,<br>siempre contigo</div>
+  <div style="width:100%;text-align:left">
+    <div class="auth-switch-btns">
+      <button class="auth-tab-btn active-tab" id="tab-login" onclick="switchAuthMode('login')">Entrar</button>
+      <button class="auth-tab-btn inactive-tab" id="tab-register" onclick="switchAuthMode('register')">Crear cuenta</button>
+    </div>
+    <div id="login-fields">
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="auth-email" placeholder="ejemplo@correo.com" oninput="document.getElementById('login-error').style.display='none'"></div>
+      <div class="form-group"><label class="form-label">CONTRASEÑA</label><div style="position:relative;">
+        <input class="form-input" type="password" id="auth-pass" placeholder="••••••••" style="padding-right:42px;" oninput="document.getElementById('login-error').style.display='none'">
+        <button type="button" onclick="togglePass('auth-pass','eye-login')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-login"><span class="material-icons" style="font-size:20px;">visibility</span></button>
+      </div></div>
+      <button class="btn-primary" onclick="loginEmail()">Entrar</button>
+      <div id="login-error" style="display:none;color:var(--red);font-size:12px;text-align:center;margin-top:6px;"></div>
+      <div class="auth-reset-link">¿Olvidaste tu contraseña? <a onclick="resetPass()">Recuperar</a></div>
+    </div>
+    <div id="register-fields" style="display:none">
+      <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="reg-username" placeholder="¿Cómo te llamas?"></div>
+      <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="reg-email" placeholder="ejemplo@correo.com"></div>
+      <div class="form-group">
+        <label class="form-label">CONTRASEÑA</label>
+        <div style="position:relative;">
+          <input class="form-input" type="password" id="reg-pass" placeholder="••••••••" maxlength="20" style="padding-right:42px;">
+          <button type="button" onclick="togglePass('reg-pass','eye-reg')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-reg"><span class="material-icons" style="font-size:20px;">visibility</span></button>
+        </div>
+        <div class="pass-hint" id="pass-hint"></div>
+      </div>
+      <button class="btn-primary" onclick="registerEmail()">Crear cuenta</button>
+    </div>
+    <div class="verify-banner" id="verify-banner" style="display:none"></div>
+  </div>
+</div>
+
+<!-- SETUP SCREEN (primera vez / nueva cuenta) -->
+<div id="setup-screen" style="display:none;flex-direction:column;min-height:100dvh;background:var(--bg);overflow-y:auto;">
+  <!-- Splash de carga al guardar -->
+  <div id="setup-saving-overlay" style="display:none;position:fixed;inset:0;z-index:999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <img src="splash.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:80px;width:100%;height:100%;">
+      <div class="loader-spinner" style="margin-bottom:14px;"></div>
+      <div id="splash-msg" style="font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:0.3px;">Personalizando tu perfil...</div>
+    </div>
+  </div>
+
+  <div style="padding:52px 24px 40px;max-width:430px;margin:0 auto;width:100%;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <img src="icon-192.png" style="width:56px;height:56px;border-radius:18px;margin-bottom:12px" onerror="this.style.display='none'">
+      <div style="font-family:var(--font-serif);font-size:28px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">¡Bienvenido!</div>
+      <div style="font-size:13px;color:var(--text3);line-height:1.6;">Personaliza MoniFy a tu gusto.<br>Podrás cambiarlo después.</div>
+    </div>
+
+    <!-- Barra de progreso por pasos -->
+    <div class="setup-stepper" id="setup-stepper">
+      <div class="setup-step-item active" data-step="1">
+        <div class="setup-step-circle">1</div>
+        <div class="setup-step-label">Categorías</div>
+      </div>
+      <div class="setup-step-line"></div>
+      <div class="setup-step-item" data-step="2">
+        <div class="setup-step-circle">2</div>
+        <div class="setup-step-label">Secciones</div>
+      </div>
+      <div class="setup-step-line"></div>
+      <div class="setup-step-item" data-step="3">
+        <div class="setup-step-circle">3</div>
+        <div class="setup-step-label">Quincena</div>
+      </div>
+    </div>
+
+    <!-- PASO 1: Categorías -->
+    <div id="setup-step-1" class="setup-step-content">
+      <div class="setup-section">
+        <div class="setup-section-title">🗃️ Tus categorías</div>
+        <div class="setup-section-sub">Mín. 3, máx. 7.</div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Así se verán</div>
+          <div class="cat-grid" id="setup-cat-preview"></div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Ordenar y editar</div>
+        <div id="setup-cat-list" class="setup-cat-list"></div>
+
+        <div id="setup-add-cat-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+            <input class="form-input setup-emoji-input" type="text" id="new-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+            <input class="form-input" type="text" id="new-cat-name" placeholder="Nombre de categoría" maxlength="18" style="flex:1;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-save" style="margin-top:0;flex:1;" onclick="addSetupCat()">Agregar</button>
+            <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="cancelAddCat()">Cancelar</button>
+          </div>
+        </div>
+
+        <button class="btn-secondary" id="setup-add-cat-btn" style="margin-top:10px;" onclick="showAddCatForm()">＋ Nueva categoría</button>
+      </div>
+      <button class="btn-primary" onclick="setupGoStep(2)" style="margin-top:8px;">Siguiente →</button>
+    </div>
+
+    <!-- PASO 2: Secciones -->
+    <div id="setup-step-2" class="setup-step-content" style="display:none;">
+      <div class="setup-section">
+        <div class="setup-section-title">📌 Secciones</div>
+        <div class="setup-section-sub">Activa las que quieras usar</div>
+
+        <div class="setup-switch-row">
+          <div>
+            <div class="setup-switch-label">🌱 Ahorro</div>
+            <div class="setup-switch-sub">Guarda dinero aparte de tus gastos</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setup-switch-ahorro">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setup-switch-row">
+          <div>
+            <div class="setup-switch-label">🤝 Préstamos</div>
+            <div class="setup-switch-sub">Registra y controla lo que prestas</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setup-switch-prestamos">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setup-switch-row">
+          <div>
+            <div class="setup-switch-label">🏍️ Kms</div>
+            <div class="setup-switch-sub">Lleva el control de tu kilometraje y gasolina</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setup-switch-kms" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="setupGoStep(3)" style="margin-top:8px;">Siguiente →</button>
+      <button class="btn-secondary" onclick="setupGoStep(1)" style="margin-top:6px;">← Atrás</button>
+    </div>
+
+    <!-- PASO 3: Primera quincena -->
+    <div id="setup-step-3" class="setup-step-content" style="display:none;">
+      <div class="setup-section">
+        <div class="setup-section-title">📅 Tu primera quincena</div>
+        <div class="setup-section-sub">Configúrala ahora para empezar de inmediato</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">INICIO</label><input class="form-input" type="date" id="setup-q-inicio"></div>
+          <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="setup-q-fin"></div>
+        </div>
+        <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="setup-q-saldo" placeholder="$0.00"></div>
+      </div>
+      <button class="btn-primary" onclick="saveSetup()" style="margin-top:8px;">¡Listo, entrar a MoniFy! 🎉</button>
+      <button class="btn-secondary" onclick="setupGoStep(2)" style="margin-top:6px;">← Atrás</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CATEGORÍA (setup) -->
+<div class="modal-overlay centered" id="modal-edit-cat">
+  <div class="modal">
+    <div class="modal-title">Editar categoría</div>
+    <input type="hidden" id="edit-cat-idx">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+      <input class="form-input setup-emoji-input" type="text" id="edit-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+      <input class="form-input" type="text" id="edit-cat-name" placeholder="Nombre" maxlength="18" style="flex:1;" id="edit-cat-name">
+    </div>
+    <button class="btn-save" style="margin-top:0;" onclick="saveEditCat()">Guardar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-cat')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL MULTI-CUENTA (cambiar cuenta) -->
+<div class="modal-overlay" id="modal-accounts">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cuentas</div>
+    <div id="accounts-list"></div>
+    <button class="btn-save" id="add-account-btn" onclick="startAddAccount()">＋ Agregar cuenta</button>
+    <button class="btn-secondary" onclick="closeModal('modal-accounts');setTimeout(()=>openModal('modal-perfil'),300)">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CAMBIAR CUENTA -->
+<div class="modal-overlay" id="modal-switch-account">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cambiar de cuenta</div>
+    <div id="switch-account-info" style="font-size:13px;color:var(--text3);margin-bottom:16px;text-align:center;line-height:1.5;"></div>
+    <div class="form-group">
+      <label class="form-label">CORREO</label>
+      <input class="form-input" type="email" id="switch-account-email" readonly style="opacity:0.6;cursor:default;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CONTRASEÑA</label>
+      <div style="position:relative;">
+        <input class="form-input" type="password" id="switch-account-pass" placeholder="••••••••" style="padding-right:42px;">
+        <button type="button" onclick="togglePass('switch-account-pass','eye-switch')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-switch"><span class="material-icons" style="font-size:20px;">visibility</span></button>
+      </div>
+    </div>
+    <div id="switch-account-error" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none;"></div>
+    <button class="btn-primary" onclick="confirmSwitchAccount()">Cambiar de cuenta</button>
+    <button class="btn-secondary" onclick="cancelSwitchAccount()">Cancelar</button>
+  </div>
+</div>
+
+<!-- SPLASH OVERLAY GLOBAL (cambio de cuenta, etc.) -->
+<div id="global-splash-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <img src="splash.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:80px;width:100%;height:100%;">
+    <div class="loader-spinner" style="margin-bottom:14px;"></div>
+    <div id="global-splash-msg" style="font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:0.3px;">Cambiando de cuenta...</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-main" style="display:none;flex-direction:column;height:100dvh;">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-greeting">Hola, <span id="user-name-label">--</span> 👋</div>
+        <div class="header-logo">MoniFy</div>
+      </div>
+      <div class="header-right">
+        <div class="quincena-badge" id="quincena-badge-btn">📅 <span id="current-quincena-label">--</span></div>
+        <button class="avatar-btn" id="avatar-btn" onclick="openModal('modal-perfil')">?</button>
+      </div>
+    </div>
+  </div>
+  <div class="balance-section" id="balance-section">
+    <div class="balance-card">
+      <div class="balance-grid">
+        <div><div class="balance-item-label" id="bal-label-1">Inicio</div><div class="balance-item-value v-accent" id="saldo-inicial-display">$0</div></div>
+        <div><div class="balance-item-label" id="bal-label-2">Disponible</div><div class="balance-item-value v-green" id="saldo-actual-display">$0</div></div>
+        <div><div class="balance-item-label" id="bal-label-3">Gastado</div><div class="balance-item-value v-red" id="total-gastado-display">$0</div></div>
+        <div><div class="balance-item-label" id="bal-label-4">Ahorrado</div><div class="balance-item-value v-teal" id="total-ahorrado-display">$0</div></div>
+      </div>
+      <div class="progress-bar-wrap" id="progress-bar-wrap">
+        <div class="progress-bar-labels"><span>Progreso del gasto</span><span id="progress-pct">0%</span></div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="movimientos">Movimientos</div>
+    <div class="nav-tab" data-tab="resumen">Resumen</div>
+    <div class="nav-tab" data-tab="ahorro">Ahorro</div>
+    <div class="nav-tab" data-tab="prestamos">Préstamos</div>
+  </div>
+  <div class="content" id="main-content"></div>
+  <div class="fab-wrap" id="fab-wrap">
+    <div class="gas-price-chip" id="gas-price-chip" onclick="window.toggleGasPriceChip()">
+      <span class="gas-price-emoji">⛽</span><span class="gas-price-text" id="gas-price-display">$23.99/L</span>
+    </div>
+    <button class="fab" id="fab-btn">＋ Agregar movimiento</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL NUEVO MOVIMIENTO -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-add-title">Nuevo movimiento</div>
+    <div class="type-toggle">
+      <button class="type-btn active-gasto" id="type-gasto" onclick="setType('gasto')">💸 Gasto</button>
+      <button class="type-btn" id="type-ahorro-transfer" onclick="setType('ahorro-transfer')">💰 Ahorro</button>
+      <button class="type-btn" id="type-ingreso" onclick="setType('ingreso')">💲 Extra</button>
+    </div>
+    <div id="ahorro-transfer-hint" style="display:none;font-size:12px;color:var(--text3);background:var(--bg3);border-radius:8px;padding:9px 12px;margin-bottom:14px;line-height:1.5;">
+      💡 Este monto se descontará de tu disponible y se moverá a tu ahorro.
+    </div>
+    <div id="destino-wrap" style="display:none;margin-bottom:14px">
+      <div class="form-label">¿A DÓNDE VA ESTE EXTRA?</div>
+      <div class="destino-toggle">
+        <button class="destino-btn active-ahorro" id="dest-ahorro" onclick="setDestino('ahorro')">💰 Al ahorro</button>
+        <button class="destino-btn" id="dest-disp" onclick="setDestino('disponible')">💲 Al disponible</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">MONTO *</label><input class="form-input" type="number" inputmode="decimal" id="input-monto" placeholder="$0.00"></div>
+    <div class="form-group"><label class="form-label">DESCRIPCIÓN (opcional)</label><input class="form-input" type="text" id="input-desc" placeholder="¿De qué fue?"></div>
+    <div id="cat-wrap" class="form-group"><label class="form-label">CATEGORÍA</label><div class="cat-grid" id="cat-grid"></div></div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="input-fecha"></div>
+    <button class="btn-save" onclick="saveMovimiento()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-add')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE MOVIMIENTO -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-title">Detalle</div>
+    <div id="detail-content"></div>
+    <!-- NUEVO: botón editar -->
+    <button class="btn-warn" id="detail-edit-btn">✏️ Editar</button>
+    <button class="btn-danger" id="detail-delete-btn">🗑️ Eliminar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN GENÉRICA -->
+<div class="modal-overlay centered" id="modal-confirm">
+  <div class="modal">
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirm-icon">⚠️</div>
+      <div class="confirm-msg" id="confirm-msg"></div>
+      <div class="confirm-sub" id="confirm-sub"></div>
+    </div>
+    <button class="btn-danger" id="confirm-ok-btn">Confirmar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-confirm')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL QUINCENAS -->
+<div class="modal-overlay" id="modal-quincena">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Mis Quincenas</div>
+    <div id="quincena-list"></div>
+    <div class="section-title">Nueva Quincena</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">INICIO</label><input class="form-input" type="date" id="q-inicio"></div>
+      <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="q-fin"></div>
+    </div>
+    <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="q-saldo" placeholder="$0.00"></div>
+    <button class="btn-save" onclick="createQuincena()">Crear quincena</button>
+    <button class="btn-secondary" onclick="closeModal('modal-quincena')">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR QUINCENA -->
+<div class="modal-overlay" id="modal-edit-q">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar quincena</div>
+    <input type="hidden" id="edit-q-id">
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">INICIO</label><input class="form-input" type="date" id="edit-q-inicio"></div>
+      <div class="form-group"><label class="form-label">FIN</label><input class="form-input" type="date" id="edit-q-fin"></div>
+    </div>
+    <div class="form-group"><label class="form-label">SALDO INICIAL</label><input class="form-input" type="number" inputmode="decimal" id="edit-q-saldo" placeholder="$0.00"></div>
+    <button class="btn-warn" onclick="confirmEditQuincena()">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-q')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PERFIL -->
+<div class="modal-overlay" id="modal-perfil">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="profile-header">
+      <div class="profile-avatar" id="perfil-avatar">?</div>
+      <div class="profile-name" id="perfil-name">--</div>
+      <div class="profile-email-txt" id="perfil-email">--</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn-warn" onclick="openAccountsModal()" style="flex:1;margin-top:0;">👤 Cuentas</button>
+      <button class="btn-secondary" onclick="openSettings()" style="flex:1;margin-top:0;">⚙️ Config.</button>
+    </div>
+    <button class="btn-danger" onclick="confirmLogout()" style="margin-top:8px;">Cerrar sesión</button>
+    <button class="btn-secondary" onclick="closeModal('modal-perfil')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PERFIL (encima del modal-perfil) -->
+<div class="modal-overlay centered" id="modal-edit-perfil">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar perfil</div>
+    <div class="form-group"><label class="form-label">USUARIO</label><input class="form-input" type="text" id="edit-perfil-username" placeholder="Tu nombre"></div>
+    <div class="form-group"><label class="form-label">CORREO</label><input class="form-input" type="email" id="edit-perfil-email" disabled style="opacity:0.7;cursor:default;"></div>
+    <div class="save-indicator" id="save-indicator-perfil" style="opacity:0;text-align:center;margin-bottom:4px;">✓ Guardado</div>
+    <button class="btn-save" onclick="saveEditPerfil()">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-edit-perfil')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR CUENTA (encima del modal-perfil) -->
+<div class="modal-overlay centered" id="modal-delete-account">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;font-size:36px;margin:8px 0;">⚠️</div>
+    <div class="modal-title" style="text-align:center;">¿Eliminar tu cuenta?</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center;line-height:1.6;margin-bottom:16px;">Se borrarán permanentemente tu cuenta y todos tus datos: movimientos, quincenas, préstamos y configuración.<br><strong style="color:var(--red);">Esta acción no se puede deshacer.</strong></div>
+    <button class="btn-danger" onclick="deleteAccountPermanently()" style="width:100%;">Sí, eliminar todo</button>
+    <button class="btn-secondary" onclick="closeModal('modal-delete-account')" style="margin-top:8px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PRÉSTAMO -->
+<div class="modal-overlay" id="modal-prestamo">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-prestamo-title">Nuevo préstamo</div>
+    <input type="hidden" id="prestamo-edit-id">
+    <div class="form-group"><label class="form-label">NOMBRE DEL DEUDOR *</label><input class="form-input" type="text" id="p-nombre" placeholder="¿A quién le prestas?"></div>
+    <div class="form-group"><label class="form-label">CAPITAL PRESTADO *</label><input class="form-input" type="number" inputmode="decimal" id="p-capital" placeholder="$0.00"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">INTERÉS % (quincenal)</label><input class="form-input" type="number" inputmode="decimal" id="p-interes" placeholder="ej. 10"></div>
+      <div class="form-group"><label class="form-label">FECHA DEL PRÉSTAMO</label><input class="form-input" type="date" id="p-fecha"></div>
+    </div>
+    <div class="form-group"><label class="form-label">NOTAS (opcional)</label><input class="form-input" type="text" id="p-notas" placeholder="Descripción o acuerdo"></div>
+    <div id="p-preview" style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;display:none">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;letter-spacing:0.5px">PROYECCIÓN</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:10px;color:var(--text3)">Total a cobrar</div><div style="font-size:14px;font-weight:600;color:var(--teal)" id="prev-total">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Ganancia (interés)</div><div style="font-size:14px;font-weight:600;color:var(--green)" id="prev-ganancia">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Cobro quincenal</div><div style="font-size:14px;font-weight:600;color:var(--accent)" id="prev-quincenal">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">Cobro mensual</div><div style="font-size:14px;font-weight:600;color:var(--amber)" id="prev-mensual">$0</div></div>
+      </div>
+    </div>
+    <button class="btn-save" onclick="savePrestamo()">Guardar préstamo</button>
+    <button class="btn-danger" onclick="closeModal('modal-prestamo')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PRÉSTAMO -->
+<div class="modal-overlay" id="modal-prestamo-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-prestamo-nombre">Préstamo</div>
+    <div id="detail-prestamo-content"></div>
+    <!-- NUEVO: dos botones separados para interés y abono -->
+    <button class="btn-interes" onclick="openRegistrarInteres()" id="btn-registrar-interes">🔄 Registrar interés cobrado</button>
+    <button class="btn-abono" onclick="openRegistrarPago()" id="btn-registrar-pago">💵 Registrar abono al capital</button>
+    <button class="btn-liquidar" id="btn-liquidar-prestamo">✅ Marcar como liquidado</button>
+    <button class="btn-warn" onclick="openEditPrestamo()" id="btn-edit-prestamo">✏️ Editar</button>
+    <button class="btn-danger" id="btn-delete-prestamo">🗑️ Eliminar</button>
+    <button class="btn-secondary" onclick="closeModal('modal-prestamo-detail')" style="margin-top:4px">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR CARGA DE GASOLINA -->
+<div class="modal-overlay" id="modal-gas">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="gas-modal-title">⛽ Registrar carga de gasolina</div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="gas-fecha"></div>
+    <div class="form-group"><label class="form-label">MONTO CARGADO *</label><input class="form-input" type="number" inputmode="decimal" id="gas-monto" placeholder="$0.00"></div>
+    <div class="form-group">
+      <label class="form-label">LITROS (opcional)</label>
+      <input class="form-input" type="number" inputmode="decimal" id="gas-litros" placeholder="ej. 12.5">
+      <div class="form-hint" id="gas-litros-hint">Si lo dejas vacío, se calcula solo con el precio actual.</div>
+      <div class="form-hint-error" id="gas-litros-warning"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">KILOMETRAJE ACTUAL *</label>
+      <input class="form-input" type="number" inputmode="decimal" id="gas-km" placeholder="ej. 45680">
+      <div class="form-hint" id="gas-km-hint"></div>
+    </div>
+    <button class="btn-save" onclick="saveGasRegistro()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-gas')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PRECIO DE GASOLINA -->
+<div class="modal-overlay" id="modal-gas-precio">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⛽ Precio de la gasolina</div>
+    <div class="form-group">
+      <label class="form-label">PRECIO POR LITRO *</label>
+      <input class="form-input" type="number" inputmode="decimal" id="gas-precio-input" placeholder="ej. 23.99">
+      <div class="form-hint">Aplica a esta quincena y a las futuras, hasta que lo vuelvas a cambiar. Las quincenas pasadas no se ven afectadas.</div>
+    </div>
+    <button class="btn-save" onclick="saveGasPrecio()">Guardar</button>
+    <button class="btn-danger" onclick="window.closeGasPriceModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR PAGO / INTERÉS -->
+<div class="modal-overlay" id="modal-pago">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-pago-title">Registrar pago</div>
+    <input type="hidden" id="pago-prestamo-id">
+    <input type="hidden" id="pago-tipo">
+    <div class="form-group"><label class="form-label" id="pago-monto-label">MONTO *</label><input class="form-input" type="number" inputmode="decimal" id="pago-monto" placeholder="$0.00"></div>
+    <div class="form-group"><label class="form-label">FECHA</label><input class="form-input" type="date" id="pago-fecha"></div>
+    <div class="form-group"><label class="form-label">NOTA (opcional)</label><input class="form-input" type="text" id="pago-nota" placeholder="ej. Quincena 1 mayo"></div>
+    <button class="btn-save" onclick="savePago()">Guardar</button>
+    <button class="btn-danger" onclick="closeModal('modal-pago')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL SETTINGS (desde perfil → Config.) -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Configuración</div>
+
+    <!-- Mi cuenta -->
+    <div class="setup-section" style="margin-bottom:14px;">
+      <button class="settings-nav-row" onclick="openSettingsAccount()">
+        <span class="settings-nav-label">
+          <span class="settings-nav-icon">👤</span>
+          <span>
+            <div class="settings-nav-title">Mi cuenta</div>
+            <div class="settings-nav-sub">Edita tu perfil o elimina tu cuenta</div>
+          </span>
+        </span>
+        <span class="settings-nav-arrow">›</span>
+      </button>
+    </div>
+
+    <!-- Categorías: fila tipo Facebook -->
+    <div class="setup-section" style="margin-bottom:14px;">
+      <button class="settings-nav-row" onclick="openSettingsCats()">
+        <span class="settings-nav-label">
+          <span class="settings-nav-icon">🗃️</span>
+          <span>
+            <div class="settings-nav-title">Categorías</div>
+            <div class="settings-nav-sub">Edita, agrega u ordena tus categorías</div>
+          </span>
+        </span>
+        <span class="settings-nav-arrow">›</span>
+      </button>
+    </div>
+
+    <!-- Secciones: fila tipo Facebook -->
+    <div class="setup-section" style="margin-bottom:16px;">
+      <button class="settings-nav-row" onclick="openSettingsSections()">
+        <span class="settings-nav-label">
+          <span class="settings-nav-icon">📌</span>
+          <span>
+            <div class="settings-nav-title">Secciones</div>
+            <div class="settings-nav-sub">Personaliza las secciones del menú</div>
+          </span>
+        </span>
+        <span class="settings-nav-arrow">›</span>
+      </button>
+    </div>
+
+    <button class="btn-save" onclick="saveSettings()" style="margin-top:0;">Guardar cambios</button>
+    <button class="btn-secondary" onclick="closeModal('modal-settings');setTimeout(()=>openModal('modal-perfil'),300)">Cancelar</button>
+  </div>
+
+  <!-- Panel secundario: Mi cuenta -->
+  <div class="settings-subpanel" id="settings-subpanel-account">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsAccount()">‹ <span class="back-label">Volver</span></button>
+    </div>
+    <div class="settings-subpanel-body">
+      <!-- Perfil: avatar + nombre + correo (solo display) -->
+      <div class="profile-header" style="padding-bottom:12px;">
+        <div class="profile-avatar" id="settings-perfil-avatar">?</div>
+        <div class="profile-name" id="settings-perfil-name">--</div>
+        <div class="profile-email-txt" id="settings-perfil-email">--</div>
+      </div>
+      <!-- Stats -->
+      <div id="perfil-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">MOVIMIENTOS</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent)" id="stat-movimientos">--</div>
+          <div style="font-size:10px;color:var(--text3)">última quincena</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">DISPONIBLE</div>
+          <div style="font-size:15px;font-weight:700;color:var(--teal)" id="stat-disponible">--</div>
+          <div style="font-size:10px;color:var(--text3)">última quincena</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">AHORRO</div>
+          <div style="font-size:15px;font-weight:700;color:var(--green)" id="stat-ahorro">--</div>
+          <div style="font-size:10px;color:var(--text3)">última quincena</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">PRÉSTAMOS ACTIVOS</div>
+          <div style="font-size:20px;font-weight:700;color:var(--green)" id="stat-prestamos">--</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;grid-column:1/-1;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px;">QUINCENAS REGISTRADAS</div>
+          <div style="font-size:20px;font-weight:700;color:var(--accent)" id="stat-quincenas">--</div>
+          <div style="font-size:10px;color:var(--text3)">en total</div>
+        </div>
+      </div>
+    </div>
+    <!-- Botones fijos al fondo -->
+    <div style="padding:12px 16px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+      <button class="btn-secondary" onclick="changePassword()" style="margin-top:0;">🔑 Cambiar contraseña</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-save" onclick="openEditPerfilModal()" style="flex:1;margin-top:0;">✏️ Editar perfil</button>
+        <button class="btn-danger" onclick="confirmLogout()" style="flex:1;margin-top:0;">🚪 Cerrar sesión</button>
+      </div>
+      <button class="btn-danger" onclick="openDeleteAccountModal()" style="margin-top:0;background:transparent;border:1px solid var(--red);color:var(--red);font-size:13px;">🗑️ Eliminar cuenta</button>
+      <div style="text-align:center;font-size:11px;color:var(--text3);opacity:0.6;">MoniFy v1.0</div>
+    </div>
+  </div>
+
+  <!-- Panel secundario: Categorías -->
+  <div class="settings-subpanel" id="settings-subpanel-cats">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsCats()">‹ <span class="back-label">Volver</span></button>
+    </div>
+    <div class="settings-subpanel-section-title">Categorías</div>
+    <div class="settings-subpanel-body">
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Vista previa</div>
+        <div class="cat-grid" id="settings-cat-preview"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px;text-transform:uppercase;">Ordenar y editar</div>
+      <div id="settings-cat-list" class="setup-cat-list"></div>
+      <div id="settings-add-cat-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-top:10px;">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <input class="form-input setup-emoji-input" type="text" id="settings-new-cat-emoji" placeholder="😀" maxlength="2" style="width:60px;text-align:center;font-size:22px;padding:8px;">
+          <input class="form-input" type="text" id="settings-new-cat-name" placeholder="Nombre de categoría" maxlength="18" style="flex:1;">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-save" style="margin-top:0;flex:1;" onclick="addSettingsCat()">Agregar</button>
+          <button class="btn-secondary" style="margin-top:0;flex:1;" onclick="cancelAddSettingsCat()">Cancelar</button>
+        </div>
+      </div>
+      <button class="btn-secondary" id="settings-add-cat-btn" style="margin-top:10px;" onclick="showAddSettingsCatForm()">＋ Nueva categoría</button>
+    </div>
+  </div>
+
+  <!-- Panel secundario: Secciones -->
+  <div class="settings-subpanel" id="settings-subpanel-sections">
+    <div class="settings-subpanel-header">
+      <button class="settings-back-btn" onclick="closeSettingsSections()">‹ <span class="back-label">Volver</span></button>
+    </div>
+    <div class="settings-subpanel-section-title">Secciones</div>
+    <div class="settings-subpanel-body">
+      <div class="setup-section-sub" style="margin-bottom:16px;">Personaliza las secciones del menú</div>
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🌱 Ahorro</div>
+          <div class="setup-switch-sub">Guarda dinero aparte de tus gastos</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-switch-ahorro">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🤝 Préstamos</div>
+          <div class="setup-switch-sub">Registra y controla lo que prestas</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-switch-prestamos">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setup-switch-row">
+        <div>
+          <div class="setup-switch-label">🏍️ Kms</div>
+          <div class="setup-switch-sub">Lleva el control de tu kilometraje y gasolina</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-switch-kms">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div id="tutorial-overlay" style="display:none;position:fixed;inset:0;z-index:200;pointer-events:none;">
+  <canvas id="tutorial-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div id="tutorial-tooltip" style="position:absolute;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:16px 18px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.6);pointer-events:all;transition:top 0.3s ease,left 0.3s ease;">
+    <div id="tutorial-step-badge" style="font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;"></div>
+    <div id="tutorial-text" style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:14px;"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="tutorial-skip-btn" style="flex:1;background:transparent;border:1px solid var(--border);border-radius:10px;padding:8px;font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--font);">Omitir</button>
+      <button id="tutorial-next-btn" style="flex:2;background:var(--grad2);border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:600;color:white;cursor:pointer;font-family:var(--font);">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADVERTENCIA AGREGAR CUENTA -->
+<!-- MODAL AGREGAR CUENTA -->
+<div class="modal-overlay" id="modal-add-account">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Agregar cuenta</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.5;">Ingresa los datos de la cuenta a agregar. Debe estar previamente registrada y verificada en MoniFy.</div>
+    <div class="form-group">
+      <label class="form-label">CORREO</label>
+      <input class="form-input" type="email" id="add-account-email" placeholder="ejemplo@correo.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">CONTRASEÑA</label>
+      <div style="position:relative;">
+        <input class="form-input" type="password" id="add-account-pass" placeholder="••••••••" style="padding-right:42px;">
+        <button type="button" onclick="togglePass('add-account-pass','eye-add-account')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;display:flex;align-items:center;" id="eye-add-account"><span class="material-icons" style="font-size:20px;">visibility</span></button>
+      </div>
+    </div>
+    <div id="add-account-error" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none;"></div>
+    <button class="btn-save" onclick="confirmAddAccount()">Agregar cuenta</button>
+    <button class="btn-secondary" onclick="cancelAddAccount()">Cancelar</button>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
